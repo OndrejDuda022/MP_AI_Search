@@ -12,14 +12,14 @@
         "pagemap": {
             "cse_thumbnail": [
                 {
-                    "src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQlIDxZGhkQPYuowrZ56KV_0VInKUKS5RrF-AS65uF1Hi0HWGnwQwPf3Tw&s",
-                    "width": "300",
-                    "height": "168"
+                    "src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_ZGUcJYXQh-huXQ_GntMUXF3xRFqYrpeb33VsCtLfd-fz9-HwNVnM3w&s=0",
+                    "width": "150",
+                    "height": "84"
                 }
             ],
             "metatags": [
                 {
-                    "og:image": "https://images.ctfassets.net/kftzwdyauwt9/3KGOHkSXu53naMuSFNaiwv/aa2f914943c839ce6b75b8620a46b340/SEO_Banner_2560x1440_02.png?w=1600&h=900&fit=fill",
+                    "og:image": "https://images.ctfassets.net/kftzwdyauwt9/3KGOHkSXu53naMuSFNaiwv/cdb0e2f899f524abb71314ab20e09c9c/OAI-white-on-black.png?w=1600&h=900&fit=fill",
                     "og:image:width": "1600",
                     "og:type": "website",
                     "twitter:card": "summary_large_image",
@@ -28,7 +28,7 @@
                     "og:image:height": "900",
                     "twitter:image:height": "900",
                     "og:description": "We believe our research will eventually lead to artificial general intelligence, a system that can solve human-level problems. Building safe and beneficial AGI is our mission.",
-                    "twitter:image": "https://images.ctfassets.net/kftzwdyauwt9/3KGOHkSXu53naMuSFNaiwv/aa2f914943c839ce6b75b8620a46b340/SEO_Banner_2560x1440_02.png?w=1600&h=900&fit=fill",
+                    "twitter:image": "https://images.ctfassets.net/kftzwdyauwt9/3KGOHkSXu53naMuSFNaiwv/cdb0e2f899f524abb71314ab20e09c9c/OAI-white-on-black.png?w=1600&h=900&fit=fill",
                     "twitter:site": "@OpenAI",
                     "twitter:image:width": "1600",
                     "viewport": "width=device-width, initial-scale=1",
@@ -38,7 +38,7 @@
             ],
             "cse_image": [
                 {
-                    "src": "https://images.ctfassets.net/kftzwdyauwt9/3KGOHkSXu53naMuSFNaiwv/aa2f914943c839ce6b75b8620a46b340/SEO_Banner_2560x1440_02.png?w=1600&h=900&fit=fill"
+                    "src": "https://images.ctfassets.net/kftzwdyauwt9/3KGOHkSXu53naMuSFNaiwv/cdb0e2f899f524abb71314ab20e09c9c/OAI-white-on-black.png?w=1600&h=900&fit=fill"
                 }
             ]
         }
@@ -136,13 +136,13 @@
                     "og:image": "https://cdn.oaistatic.com/assets/chatgpt-share-og-u7j5uyao.webp",
                     "apple-itunes-app": "app-id=6448311069",
                     "og:site_name": "ChatGPT",
-                    "dd-trace-id": "17625813120987979642",
+                    "dd-trace-id": "8687130557844750056",
                     "viewport": "width=device-width, initial-scale=1, viewport-fit=cover",
                     "og:title": "ChatGPT",
                     "keyword": "ai chat,ai,chap gpt,chat gbt,chat gpt 3,chat gpt login,chat gpt website,chat gpt,chat gtp,chat openai,chat,chatai,chatbot gpt,chatg,chatgpt login,chatgpt,gpt chat,open ai,openai chat,openai chatgpt,openai",
                     "og:url": "https://chatgpt.com/",
                     "og:description": "A conversational AI system that listens, learns, and challenges",
-                    "dd-trace-time": "1759463150193"
+                    "dd-trace-time": "1759474008129"
                 }
             ],
             "cse_image": [
@@ -337,18 +337,42 @@
     },
     {
         "kind": "customsearch#result",
-        "title": "Welcome back - OpenAI",
-        "htmlTitle": "Welcome back - <b>OpenAI</b>",
-        "link": "https://platform.openai.com/login",
+        "title": "OpenAI API key",
+        "htmlTitle": "<b>OpenAI</b> API key",
+        "link": "https://platform.openai.com/api-keys",
         "displayLink": "platform.openai.com",
-        "snippet": "Don't have an account? Sign up. OR. Google logo. Continue with Google. Microsoft logo. Continue with Microsoft Account. Apple logo. Continue with Apple.",
-        "htmlSnippet": "Don&#39;t have an account? Sign up. OR. Google logo. Continue with Google. Microsoft logo. Continue with Microsoft Account. Apple logo. Continue with Apple.",
-        "formattedUrl": "https://platform.openai.com/login",
-        "htmlFormattedUrl": "https://platform.<b>openai</b>.com/login",
+        "snippet": "Explore resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's developer platform.",
+        "htmlSnippet": "Explore resources, tutorials, API docs, and dynamic examples to get the most out of <b>OpenAI&#39;s</b> developer platform.",
+        "formattedUrl": "https://platform.openai.com/api-keys",
+        "htmlFormattedUrl": "https://platform.<b>openai</b>.com/api-keys",
         "pagemap": {
+            "cse_thumbnail": [
+                {
+                    "src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRw3_W_FoODv8iw5OuiI9DoxFAunCOA0S7ltEFw7kE7zVONFJccoUJxj0G6&s",
+                    "width": "311",
+                    "height": "162"
+                }
+            ],
             "metatags": [
                 {
-                    "viewport": "width=device-width, initial-scale=1.0"
+                    "og:image": "https://cdn.openai.com/API/images/platform-opengraph.png",
+                    "theme-color": "#000000",
+                    "og:type": "website",
+                    "twitter:card": "summary_large_image",
+                    "twitter:title": "OpenAI Platform",
+                    "twitter:domain": "platform.openai.com",
+                    "twitter:url": "https://platform.openai.com",
+                    "og:title": "OpenAI Platform",
+                    "og:description": "Explore developer resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's platform.",
+                    "twitter:image": "https://cdn.openai.com/API/images/platform-opengraph.png",
+                    "viewport": "width=device-width, initial-scale=1",
+                    "twitter:description": "Explore developer resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's platform.",
+                    "og:url": "https://platform.openai.com"
+                }
+            ],
+            "cse_image": [
+                {
+                    "src": "https://cdn.openai.com/API/images/platform-opengraph.png"
                 }
             ]
         }
@@ -359,8 +383,8 @@
         "htmlTitle": "<b>OpenAI</b> Status",
         "link": "https://status.openai.com/",
         "displayLink": "status.openai.com",
-        "snippet": "We're not aware of any issues affecting our systems. System status. Jul 2025-Oct 2025. APIs. 14 components. 99.84 % uptime. APIs. 14 components. ChatGPT. 24 ...",
-        "htmlSnippet": "We&#39;re not aware of any issues affecting our systems. System status. Jul 2025-Oct 2025. APIs. 14 components. 99.84 % uptime. APIs. 14 components. ChatGPT. 24&nbsp;...",
+        "snippet": "Availability metrics are reported at an aggregate level across all tiers, models and error types. Individual customer availability may vary depending on ...",
+        "htmlSnippet": "Availability metrics are reported at an aggregate level across all tiers, models and error types. Individual customer availability may vary depending on&nbsp;...",
         "formattedUrl": "https://status.openai.com/",
         "htmlFormattedUrl": "https://status.<b>openai</b>.com/",
         "pagemap": {
