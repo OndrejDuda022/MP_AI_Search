@@ -6,13 +6,12 @@ from dotenv import load_dotenv
 load_dotenv()
 sys.path.insert(0, os.getenv("PYTHONPATH"))
 
-from src.google_search import search_google, fetch_page_content
+from page_search import search_google, fetch_page_content
 
 def test_google_search():
-    # Test query
     query = "as4u"
 
-    results = search_google(query)
+    results = search_google([query], max=10)
 
     output_file = "test_google_results.json"
     with open(output_file, "w", encoding="utf-8") as f:
@@ -21,10 +20,9 @@ def test_google_search():
     print(f"Results saved to {output_file}")
 
 def test_google_search_with_content():
-    # Test query
-    query = "ibišek"
+    query = "as4u"
 
-    results = search_google([query])
+    results = search_google([query], max=5)
 
     contents = {}
     for url in results:

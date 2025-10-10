@@ -1,3 +1,2 @@
-openai
 google-api-python-client
 dotenv

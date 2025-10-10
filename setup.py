@@ -6,7 +6,6 @@ setup(
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     install_requires=[
-        "openai",
         "google-api-python-client",
         "python-dotenv"
     ],

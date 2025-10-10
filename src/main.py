@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 sys.path.insert(0, os.getenv("PYTHONPATH"))
-from src.google_search import search_google, fetch_page_content
+from page_search import search_google, fetch_page_content
 from src.ai_processing import process_with_ai, generate_search_queries
 
 def main():
@@ -15,11 +15,15 @@ def main():
     if not search_queries:
         print("The input query was deemed inappropriate. Process terminated.")
         return
+    print("Generated search queries:", search_queries)
 
-    urls = search_google(search_queries)
+    urls = search_google(search_queries, max=5)
     if not urls:
         print("No results found. Process terminated.")
         return
+    
+    urls = list(dict.fromkeys(urls))
+    print("Fetched URLs:", urls)
 
     contents = []
     for url in urls:
@@ -27,7 +31,10 @@ def main():
         if content:
             contents.append(content)
 
-    final_input = f"Original query: {query}\n\nFetched contents:\n{contents}"
+    for i, content in enumerate(contents):
+        print(f"Content {i + 1} (first 100 chars): {content[:100]}")
+
+    final_input = f"Original query: {query}\n\nUse only the following information to answer the question. If the information is not sufficient, say so.\nFetched contents:\n{contents}"
     response = process_with_ai(final_input)
     print("AI Response:", response)
 
