@@ -1,2 +1,7 @@
 google-api-python-client
 dotenv
+pydantic>=2.0.0
+requests
+beautifulsoup4
+selenium>=4.0.0
+webdriver-manager

@@ -3,4 +3,4 @@ This project implements a 3-phase search process using Google Custom Search JSON
 
 ## TO-DO
 * Some pages deny access to bots
-* Test out the AI API
+* Some pages break current web scraping method

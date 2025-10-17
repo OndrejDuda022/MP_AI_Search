@@ -1,0 +1,34 @@
+{
+    "choices": [
+        {
+            "finish_reason": "stop",
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "reasoning_content": "User: \"Generate search queries for: Kde žijí děti Karla Omáčky?\" This is a question in Czech: \"Where do the children of Karl Omáčka live?\" This is a personal data question about private individuals. Likely Karl Omáčka is a private person, asking about location of his children. This is personal data. According to policy, it's disallowed to provide personal data. So the user is requesting personal data. The user wants search queries. The policy: we should refuse. The content is a request for personal data about private individuals. We must refuse.",
+                "content": "{\"queries\":[],\"is_appropriate\":false,\"reason\":\"The user is requesting personal information about private individuals, which is disallowed.\"}"
+            }
+        }
+    ],
+    "created": 1760682531,
+    "model": "gpt-oss-20b",
+    "system_fingerprint": "b6425-70cd37db",
+    "object": "chat.completion",
+    "usage": {
+        "completion_tokens": 159,
+        "prompt_tokens": 174,
+        "total_tokens": 333
+    },
+    "id": "chatcmpl-tzEv2tlCbTXc1qu4g1XbhxPe4MDfqagG",
+    "timings": {
+        "cache_n": 161,
+        "prompt_n": 13,
+        "prompt_ms": 19.266,
+        "prompt_per_token_ms": 1.4819999999999998,
+        "prompt_per_second": 674.7638326585695,
+        "predicted_n": 159,
+        "predicted_ms": 1212.125,
+        "predicted_per_token_ms": 7.623427672955975,
+        "predicted_per_second": 131.174590079406
+    }
+}

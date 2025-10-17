@@ -1,0 +1,152 @@
+﻿================================================================================
+SCRAPED CONTENT FROM: https://en.wikipedia.org/wiki/PowerShell
+SCRAPED ON: 2025-10-17 10:44:49
+================================================================================
+
+TITLE:
+PowerShell - Wikipedia
+
+HEADINGS:
+  - Contents
+  - Background
+  - Kermit
+  - Monad
+  - PowerShell
+  - Pash
+  - Design
+  - Philosophy
+  - Grammar
+  - Named commands
+  - Extended Type System
+  - Cmdlets
+  - Pipeline
+  - Scripting
+  - Hosting
+  - Desired State Configuration
+  - Versions
+  - Project Monad
+  - Windows PowerShell
+  - 1.0
+  - 2.0
+  - 3.0
+  - 4.0
+  - 5.0
+  - 5.1
+  - PowerShell Core
+  - 6.0
+  - 6.1
+  - 6.2
+  - PowerShell
+  - 7.0
+  - 7.2
+  - 7.3
+  - 7.4
+  - 7.5
+  - 7.6
+  - Comparison of cmdlets with similar commands
+  - Application support
+  - See also
+  - References
+  - Further reading
+  - External links
+
+MAIN CONTENT:
+PowerShell includes its own extensive, console-based help (similar to man pages in Unix shells ) accessible via the Get-Help cmdlet. Updated local help contents can be retrieved from the Internet via the Update-Help cmdlet. Alternatively, help from the web can be acquired on a case-by-case basis via the -online switch to Get-Help .
+
+Shell programs, including PowerShell, trace lineage to shells in older operating systems such as MS-DOS and Xenix which exposed system functionality to the user almost exclusively via a command-line interface (CLI) – although MS-DOS 5 also came with a complementary graphical DOS Shell . The Windows 9x family came bundled with COMMAND.COM , the command-line environment of MS-DOS. The Windows NT and Windows CE families, however, came with the newer cmd.exe – a significant upgrade from COMMAND.COM. Both environments provide CLI for both internal and external commands and automation via batch files – a relatively primitive language for scripting.
+
+To address limitations of these shells – including the inability to directly use a software component exposed via COM – Microsoft introduced the Windows Script Host in 1998 with Windows 98 , and its command-line based host, cscript.exe . It integrates with the Active Script engine and allows scripts to be written in compatible languages, such as JScript and VBScript . These scripts can use COM components directly, but it has relatively inaccessible documentation and gained a reputation as a system vulnerability vector after several high-profile computer viruses exploited weaknesses in its security provisions.
+
+Monad was to be a new extensible CLI with a fresh design capable of automating a range of core administrative tasks. Microsoft first demonstrated Monad publicly at the Professional Development Conference in Los Angeles in October 2003. A few months later, they opened up private beta, which eventually led to a public beta. Microsoft published the first Monad public beta release on June 17, 2005, and the Beta 2 on September 11, 2005, and Beta 3 on January 10, 2006.
+
+A cmdlet can be added to the shell via modules or before v2 snap-ins. Users are not limited to the cmdlets included in the base PowerShell installation.
+
+The number of cmdlets included in the base PowerShell install for various versions:
+
+Upon running a configuration , DSC will ensure that the system gets the state described in the configuration. DSC configurations are idempotent. The Local Configuration Manager (LCM) periodically polls the system using the control flow described by resources (imperative pieces of DSC) to make sure that the state of a configuration is maintained.
+
+Initially using the code name "Monad", PowerShell was first shown publicly at the Professional Developers Conference in October 2003 in Los Angeles.
+
+New features include:
+
+Key features included:
+
+The following table contains various cmdlets that ship with PowerShell that have notably similar functionality to commands in other shells. Many of these cmdlets are exposed to the user via predefined aliases to make their use familiar to users of the other shells.
+
+LIST ITEMS:
+  - (Top)
+  - 1.1 Kermit 1.2 Monad 1.3 PowerShell 1.4 Pash
+  - 2.1 Philosophy 2.2 Grammar 2.3 Named commands 2.4 Extended Type System 2.5 Cmdlets 2.6 Pipeline 2.7 Scripting 2.8 Hosting 2.9 Desired State Configuration
+  - 3.1 Project Monad 3.2 Windows PowerShell 3.2.1 1.0 3.2.2 2.0 3.2.3 3.0 3.2.4 4.0 3.2.5 5.0 3.2.5.1 5.1 3.3 PowerShell Core 3.3.1 6.0 3.3.1.1 6.1 3.3.1.2 6.2 3.4 PowerShell 3.4.1 7.0 3.4.1.1 7.2 3.4.1.2 7.3 3.4.1.3 7.4 3.4.1.4 7.5 3.4.1.5 7.6 4 Comparison of cmdlets with similar commands 5 Filename extensions 6 Application support 7 See also 8 References 9 Further reading 10 External links
+  - .ps1 (Script) .ps1xml (XML Document) .psc1 (Console File) .psd1 (Data File) .psm1 (Script Module) .pssc (Session Configuration File) .psrc (Role Capability File) .cdxml (Cmdlet Definition XML Document)
+  - PowerShell scripts (files suffixed by .ps1 ) PowerShell functions Standalone executable programs
+  - PowerShell 7.4: 1,656
+  - Debugging for background jobs and instances hosted in other processes (each of which is called a "runspace") Desired State Configuration (DSC) Local Configuration Manager (LCM) version 2.0 DSC partial configurations DSC Local Configuration Manager meta-configurations Authoring of DSC resources using classes
+  - The -Parallel switch for the ForEach-Object cmdlet to help handle parallel processing A new error view The Get-Error cmdlet Pipeline chaining operators ( &amp;&amp; and || ) that allow conditional execution of the next cmdlet in the pipeline
+  - The ??= operator for null coalescing assignment Cross-platform Invoke-DscResource (experimental) Return of the Out-GridView cmdlet
+  - webcmdlets default to UTF-8 encoding (changing from ASCII -superset ISO-8859-1 , that does not support Unicode ). Previously UTF-8 was default for other, but not all, things.
+  - Print Services for UNIX
+  - This page was last edited on 15 October 2025, at 09:42 &#160;(UTC) . Text is available under the Creative Commons Attribution-ShareAlike 4.0 License ; additional terms may apply. By using this site, you agree to the Terms of Use and Privacy Policy . Wikipedia® is a registered trademark of the Wikimedia Foundation, Inc. , a non-profit organization.
+
+IMAGE ALT TEXTS:
+  - Wikipedia
+  - The Free Encyclopedia
+  - Edit this at Wikidata
+  - Wikimedia Foundation
+  - Powered by MediaWiki
+
+LINKS (unique, max 50):
+  - Jump to content
+  - Edit links
+  - Windows Terminal
+  - Paradigm
+  - Imperative
+  - pipeline
+  - object-oriented
+  - functional
+  - reflective
+  - Designed&#160;by
+  - Jeffrey Snover
+  - Developer
+  - Microsoft
+  - Stable release
+  - Preview release
+  - Typing discipline
+  - Strong
+  - safe
+  - implicit
+  - dynamic
+  - Platform
+  - .NET
+  - .NET Framework
+  - Windows 7
+  - Windows Server 2008 R2
+  - macOS 10.12
+  - Ubuntu
+  - Debian
+  - CentOS
+  - Red Hat Enterprise Linux
+  - openSUSE
+  - Fedora
+  - License
+  - MIT License
+  - proprietary
+  - Filename extensions
+  - Python
+  - Perl
+  - Chef
+  - Puppet
+  - shell
+  - program
+  - configuration management
+  - command-line
+  - interpreter
+  - script
+  - language
+  - open-source
+  - cross-platform
+  - versions of Windows
+
+================================================================================
+END OF SCRAPED CONTENT
+================================================================================
