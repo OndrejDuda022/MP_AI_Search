@@ -32,11 +32,6 @@ def search_google(queries, max=5):
 #1st attempt: fetch page using requests
 def fetch_with_requests(url: str, timeout: int = 10) -> Optional[str]:
     try:
-        session = requests.Session()
-        retries = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
-        session.mount('http://', HTTPAdapter(max_retries=retries))
-        session.mount('https://', HTTPAdapter(max_retries=retries))
-
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -47,7 +42,7 @@ def fetch_with_requests(url: str, timeout: int = 10) -> Optional[str]:
             'Upgrade-Insecure-Requests': '1'
         }
 
-        response = session.get(url, headers=headers, timeout=timeout)
+        response = requests.get(url, headers=headers, timeout=timeout)
         response.raise_for_status()
         response.encoding = response.apparent_encoding or 'utf-8'
 

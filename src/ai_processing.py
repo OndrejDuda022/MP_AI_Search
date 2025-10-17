@@ -20,7 +20,7 @@ class AIResponse(BaseModel):
     confidence: str
 
 #generate search queries based on user input
-def generate_search_queries(user_input):
+def generate_search_queries(user_input, language="auto"):
     api_key = os.getenv("AI_API_KEY")
 
     if not api_key:
@@ -32,6 +32,16 @@ def generate_search_queries(user_input):
         "Content-Type": "application/json"
     }
     
+    if language == "auto":
+        lang_instruction = "Generate queries in the same language as the user input (Czech if user writes in Czech, English if English, etc.)."
+    else:
+        lang_map = {
+            "cs": "Generate all queries in Czech language.",
+            "en": "Generate all queries in English language.",
+            "sk": "Generate all queries in Slovak language."
+        }
+        lang_instruction = lang_map.get(language, "Generate queries in the same language as the user input.")
+    
     payload = {
         "messages": [
             {
@@ -41,7 +51,8 @@ def generate_search_queries(user_input):
                     "Determine if the input is appropriate. Consider inappropriate: personal data, confidential information, "
                     "illegal activities, requests for backend internals (SQL, code snippets). "
                     "If input is already a well-formed search query (keywords, specific phrases, no complete sentences), "
-                    "return it as the primary query and generate fewer alternatives if needed."
+                    "return it as the primary query and generate fewer alternatives if needed. "
+                    f"{lang_instruction}"
                 )
             },
             {
@@ -100,7 +111,7 @@ def generate_search_queries(user_input):
     return parsed_result.queries[:3]  #max 3 queries
 
 #process data with AI to generate structured response
-def process_with_ai(data, user_query=""):
+def process_with_ai(data, user_query="", language="cs"):
     api_key = os.getenv("AI_API_KEY")
 
     if not api_key:
@@ -112,6 +123,14 @@ def process_with_ai(data, user_query=""):
         "Content-Type": "application/json"
     }
     
+    language_instructions = {
+        "cs": "IMPORTANT: Always respond in Czech language (česky). All text in summary and key_points must be in Czech.",
+        "en": "IMPORTANT: Always respond in English. All text in summary and key_points must be in English.",
+        "sk": "IMPORTANT: Always respond in Slovak language (slovensky). All text in summary and key_points must be in Slovak."
+    }
+    
+    lang_instruction = language_instructions.get(language, language_instructions["cs"])
+    
     payload = {
         "messages": [
             {
@@ -121,7 +140,8 @@ def process_with_ai(data, user_query=""):
                     "Answer the user's question clearly and concisely using only the information from the provided sources. "
                     "Extract key points relevant to the question, count how many sources you used, "
                     "and assess your confidence level based on the quality and relevance of the sources. "
-                    "If the information is insufficient to answer the question, state this clearly."
+                    "If the information is insufficient to answer the question, state this clearly. "
+                    f"{lang_instruction}"
                 )
             },
             {
