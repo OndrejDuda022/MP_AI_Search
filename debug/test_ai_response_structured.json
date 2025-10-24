@@ -1,0 +1,19 @@
+{
+    "summary": "as4u.cz nabízí komplexní digitální řešení pro veřejnou a soukromou správu: editorialní systém Public4u a jeho moduly (Gallery4u, File4u, Admin4u), systém evidence projektů, intranet a e‑commerce (B2B/B2C), speciální aplikace pro kulturní a turistické informace, rezervační a vstupenkový systém, databáze subjektů, SMS, kalendáře akcí, formuláře a další rozšíření. Tato nabídka slouží obcím, městům, kraji, ministerstvům, firmám, neziskovým organizacím i kulturním institucím.",
+    "key_points": [
+        "* Editorialní systém Public4u – vytváření a správa webových stránek, článků, multimédií (Gallery4u, File4u).",
+        "* Admin4u – správa uživatelů a oprávnění.",
+        "* Moduly pro aktuality, kalendář akcí, formuláře, rezervace, SMS, databáze subjektů, přehledy, exporty.",
+        "* Evidence projektů – kompletní správa projektů od návrhu po dokončení, včetně dotací a rozpočtů.",
+        "* Intranet a informační systém – správa interních procesů a komunikace.",
+        "* E‑commerce řešení pro B2B i B2C.",
+        "* Speciální aplikace pro kulturní zařízení a informační centra, rezervace a vstupenky, datový sklad turistických informací.",
+        "* Přizpůsobitelná řešení pro obce, města, kraje, ministerstva a soukromé firmy."
+    ],
+    "sources_used": [
+        "https://www.as4u.cz/cs/aplikace/mesta-obce-a-statni-sprava/evidence-projektu.html",
+        "https://www.as4u.cz/cs/aplikace/mesta-obce-a-statni-sprava/redakcni-system-pro-verejnou-a-statni-spravu/",
+        "https://www.as4u.cz/cs/produkty/redakcni-system-public4u/videonavody/struktura-slozek-gallery4u-file4u.html"
+    ],
+    "confidence": "high"
+}

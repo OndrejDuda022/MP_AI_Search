@@ -22,7 +22,7 @@ def test_google_search():
 
 #test google search and fetch page contents
 def test_google_search_with_content():
-    query = "as4u"
+    query = "as4u služby"
 
     results = search_google([query], max=5)
 
@@ -32,7 +32,7 @@ def test_google_search_with_content():
         if content:
             contents[url] = content
 
-    output_file = "test_google_results_with_content.json"
+    output_file = "debug/test_google_results_with_content.json"
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump({"results": results, "contents": contents}, f, ensure_ascii=False, indent=4)
 
@@ -59,6 +59,7 @@ def test_selenium_fallback():
     test_urls = [
         "https://www.as4u.cz",
         "https://www.alza.cz/EN/",
+        "https://www.as4u.cz/filemanager/files/file.php?file=71835"
     ]
     
     for url in test_urls:
@@ -88,7 +89,7 @@ def test_force_selenium():
 
 if __name__ == "__main__":
     #test_google_search()
-    #test_google_search_with_content()
+    test_google_search_with_content()
     #test_page_scrape()
-    test_selenium_fallback()
+    #test_selenium_fallback()
     #test_force_selenium()

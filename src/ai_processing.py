@@ -16,7 +16,7 @@ class SearchQueries(BaseModel):
 class AIResponse(BaseModel):
     summary: str 
     key_points: List[str]
-    sources_used: int
+    sources_used: List[str]
     confidence: str
 
 #generate search queries based on user input
@@ -47,7 +47,9 @@ def generate_search_queries(user_input, language="auto"):
             {
                 "role": "system",
                 "content": (
-                    "You are a search query generator. Analyze user input and generate up to 3 Google search queries. "
+                    "You are a search query generator employed in the AI search tool of the company as4u.cz s.r.o." 
+                    "Analyze user input and generate up to 3 Google search queries in correlation with as4u.cz." 
+                    "(e.g., 'Do you have any branch offices?' -> 'as4u branch offices', 'as4u contact information', etc.) "
                     "Determine if the input is appropriate. Consider inappropriate: personal data, confidential information, "
                     "illegal activities, requests for backend internals (SQL, code snippets). "
                     "If input is already a well-formed search query (keywords, specific phrases, no complete sentences), "
@@ -57,7 +59,7 @@ def generate_search_queries(user_input, language="auto"):
             },
             {
                 "role": "user",
-                "content": f"Generate search queries for: {user_input}"
+                "content": user_input
             }
         ],
         "response_format": {
@@ -111,7 +113,7 @@ def generate_search_queries(user_input, language="auto"):
     return parsed_result.queries[:3]  #max 3 queries
 
 #process data with AI to generate structured response
-def process_with_ai(data, user_query="", language="cs"):
+def process_with_ai(data, user_query="", language="auto"):
     api_key = os.getenv("AI_API_KEY")
 
     if not api_key:
@@ -124,29 +126,31 @@ def process_with_ai(data, user_query="", language="cs"):
     }
     
     language_instructions = {
+        "auto": "IMPORTANT: Detect the language from the user query and respond in that language. All text in summary and key_points must be in the detected language.",
         "cs": "IMPORTANT: Always respond in Czech language (česky). All text in summary and key_points must be in Czech.",
         "en": "IMPORTANT: Always respond in English. All text in summary and key_points must be in English.",
         "sk": "IMPORTANT: Always respond in Slovak language (slovensky). All text in summary and key_points must be in Slovak."
     }
     
-    lang_instruction = language_instructions.get(language, language_instructions["cs"])
+    lang_instruction = language_instructions.get(language, language_instructions["auto"])
     
     payload = {
         "messages": [
             {
                 "role": "system",
                 "content": (
-                    "You are a helpful assistant that answers user questions based on provided search results. "
+                    "You are a helpful assistant of the company as4u.cz s.r.o. that answers user questions based on provided data from as4u.cz domain. "
                     "Answer the user's question clearly and concisely using only the information from the provided sources. "
                     "Extract key points relevant to the question, count how many sources you used, "
                     "and assess your confidence level based on the quality and relevance of the sources. "
                     "If the information is insufficient to answer the question, state this clearly. "
-                    f"{lang_instruction}"
+                    f"{lang_instruction}\n\n"
+                    f"Available sources:\n{data}"
                 )
             },
             {
                 "role": "user",
-                "content": data
+                "content": user_query
             }
         ],
         "response_format": {
@@ -167,8 +171,9 @@ def process_with_ai(data, user_query="", language="cs"):
                             "description": "List of 3-5 key points that support the answer or are relevant to the question"
                         },
                         "sources_used": {
-                            "type": "integer",
-                            "description": "Number of sources used to generate the summary"
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of source URLs used to generate the summary"
                         },
                         "confidence": {
                             "type": "string",

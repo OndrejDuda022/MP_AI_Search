@@ -13,10 +13,9 @@ def test_process_with_ai():
     with open(input_file, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    user_query = "Stručně v pár větách vypiš co je as4u."
+    user_query = "Jaké služby as4u.cz poskytuje?"
 
     combined_data = (
-        f"User Query: {user_query}\n"
         f"Results: {data['results']}\n"
         f"Contents: {data['contents']}"
     )
@@ -28,7 +27,9 @@ def test_process_with_ai():
     print(f"\nKey Points:")
     for i, point in enumerate(response.key_points, 1):
         print(f"  {i}. {point}")
-    print(f"\nSources Used: {response.sources_used}")
+    print(f"\nSources Used:")
+    for source in response.sources_used:
+        print(f"  - {source}")
     print(f"Confidence: {response.confidence}")
     
     #save to json file
@@ -53,6 +54,6 @@ def test_generate_search_queries():
         print("The input was deemed inappropriate.")
 
 if __name__ == "__main__":
-    test_generate_search_queries()
-    #test_process_with_ai()
+    #test_generate_search_queries()
+    test_process_with_ai()
     

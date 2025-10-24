@@ -41,9 +41,8 @@ def main():
         print(f"Content {i + 1} (first 100 chars): {content[:100]}")
 
     #process contents with AI
-    final_input = f"User question: {query}\n\nSearch results:\n{contents}"
-    response = process_with_ai(final_input, query)
-    
+    response = process_with_ai(contents, query)
+
     #display structured response
     pretty_output(response)
 
@@ -59,7 +58,12 @@ def pretty_output(response):
         for i, point in enumerate(response.key_points, 1):
             print(f"  {i}. {point}")
     
-    print(f"\n[Sources: {response.sources_used} | Confidence: {response.confidence}]")
+    if response.sources_used:
+        print("\nSources Used:")
+        for source in response.sources_used:
+            print(f"  - {source}")
+    
+    print(f"\n[Confidence: {response.confidence}]")
     print("="*60)
 
 #execute main function
