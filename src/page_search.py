@@ -8,12 +8,10 @@ from typing import Optional
 import io
 import pdfplumber
 
-
-
 load_dotenv()
 
 #function to search google using Custom Search API
-def search_google(queries, max=5):
+def search_google(queries, max=3, disregard_files=False):
     api_key = os.getenv("GOOGLE_API_KEY")
     search_engine_id = os.getenv("SEARCH_ENGINE_ID")
 
@@ -30,20 +28,20 @@ def search_google(queries, max=5):
         urls = []
         for item in items:
             url = item["link"]
-            url_lower = url.lower()
             
-            """
-            #skip those weird pdfs that pop up from who knows where
-            if 'file.php' in url_lower or '.pdf' in url_lower:
-                continue
-            """
+            if disregard_files:
+                #skip those weird pdfs that pop up from who knows where
+                url_lower = url.lower()
+                if 'file.php' in url_lower or '.pdf' in url_lower or '.doc' in url_lower or '.docx' in url_lower:
+                    continue
+            
             urls.append(url)
-            if len(urls) >= 3:
+            if len(urls) >= max:
                 break
         
         all_urls.extend(urls)
 
-    return all_urls[:max]
+    return all_urls
 
 def is_pdf_content(response: requests.Response) -> bool:
     content_type = response.headers.get('Content-Type', '').lower()
@@ -61,7 +59,7 @@ def extract_text_from_pdf(pdf_content: bytes) -> Optional[str]:
         text_parts = []
         
         with pdfplumber.open(io.BytesIO(pdf_content)) as pdf:
-            for page_num, page in enumerate(pdf.pages, 1):
+            for page in pdf.pages:
                 page_text = page.extract_text()
                 if page_text:
                     text_parts.append(page_text)
@@ -144,7 +142,8 @@ def fetch_with_selenium(url: str, timeout: int = 15) -> Optional[str]:
             return html
         finally:
             driver.quit()
-            
+
+    #don't forget to install chromedriver      
     except ImportError:
         print(f"[!] Selenium not installed.")
         print(f"[!] Skipping Selenium fallback for {url}")

@@ -32,15 +32,13 @@ def generate_search_queries(user_input, language="auto"):
         "Content-Type": "application/json"
     }
     
-    if language == "auto":
-        lang_instruction = "Generate queries in the same language as the user input (Czech if user writes in Czech, English if English, etc.)."
-    else:
-        lang_map = {
-            "cs": "Generate all queries in Czech language.",
-            "en": "Generate all queries in English language.",
-            "sk": "Generate all queries in Slovak language."
-        }
-        lang_instruction = lang_map.get(language, "Generate queries in the same language as the user input.")
+    lang_map = {
+        "cs": "Generate all queries in Czech language.",
+        "en": "Generate all queries in English language.",
+        "sk": "Generate all queries in Slovak language.",
+        "auto": "Generate queries in the same language as the user input (Czech if user writes in Czech, English if English, etc.)."
+    }
+    lang_instruction = lang_map.get(language, lang_map["auto"])
     
     payload = {
         "messages": [

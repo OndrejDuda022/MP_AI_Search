@@ -21,13 +21,16 @@ def main():
     print("Generated search queries:", search_queries)
 
     #search google
-    urls = search_google(search_queries, max=5)
+    urls = search_google(search_queries, disregard_files=True)
     if not urls:
         print("No results found. Process terminated.")
         return
     
+    #remove duplicate URLs
     urls = list(dict.fromkeys(urls))
-    print("Fetched URLs:", urls)
+    print(f"Fetched URLs: {len(urls)}")
+    for url in urls:
+        print(f" - {url}")
 
     #fetch page contents
     contents = []

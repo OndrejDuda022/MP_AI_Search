@@ -22,9 +22,9 @@ def test_google_search():
 
 #test google search and fetch page contents
 def test_google_search_with_content():
-    query = "as4u služby"
+    queries = ["as4u služby", "as4u kontakt", "as4u careers"]
 
-    results = search_google([query], max=5)
+    results = search_google(queries)
 
     contents = {}
     for url in results:
@@ -77,19 +77,21 @@ def test_selenium_fallback():
 def test_force_selenium():
     print("\n=== Testing Force Selenium Mode ===")
     
-    url = "https://github.com"
+    url = "https://openai.com/"
     print(f"Testing: {url} (forcing Selenium)")
     
     content = fetch_page_text(url, use_selenium=True)
     
     if content:
         print(f"Success! Extracted {len(content)} characters")
+        preview = content[:100]
+        print(f"First 100 characters: {preview}")
     else:
         print(f"Failed to fetch {url}")
 
 if __name__ == "__main__":
     #test_google_search()
-    test_google_search_with_content()
+    #test_google_search_with_content()
     #test_page_scrape()
     #test_selenium_fallback()
-    #test_force_selenium()
+    test_force_selenium()
