@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import requests
 from bs4 import BeautifulSoup
 import time
-from typing import Optional
+from typing import Optional, Dict
 import io
 import pdfplumber
 
@@ -152,18 +152,45 @@ def fetch_with_selenium(url: str, timeout: int = 15) -> Optional[str]:
         print(f"[!] Selenium failed for {url}: {e}")
         return None
 
+#extract title from HTML or text
+def extract_title(soup: BeautifulSoup = None, text: str = None) -> str:
+    if soup:
+        title_tag = soup.find('title')
+        if title_tag:
+            return title_tag.get_text().strip()
+        
+        #try to get h1 as fallback
+        h1_tag = soup.find('h1')
+        if h1_tag:
+            return h1_tag.get_text().strip()
+    
+    #for PDF or if no title found, try to extract from first line
+    if text:
+        first_line = text.split('\n')[0].strip() if '\n' in text else text[:100].strip()
+        return first_line if len(first_line) < 150 else first_line[:150] + "..."
+    
+    return "Untitled"
+
 #get text content from HTML
-def extract_text_from_html(html: str) -> str:
+def extract_text_from_html(html: str) -> tuple[str, str]:
     soup = BeautifulSoup(html, 'html.parser')
+    
+    title = extract_title(soup=soup)
     
     for script in soup(["script", "style"]):
         script.decompose()
-    text = soup.get_text(separator=' ', strip=True)
+    
+    main_content = soup.find('main') or soup.find('article') or soup.find('body')
+    if main_content:
+        text = main_content.get_text(separator=' ', strip=True)
+    else:
+        text = soup.get_text(separator=' ', strip=True)
+    
     text = ' '.join(text.split())
-    return text
+    return text, title
 
 #main function to fetch page text with fallback
-def fetch_page_text(url: str, use_selenium: bool = False) -> Optional[str]:
+def fetch_page_text(url: str, use_selenium: bool = False) -> Optional[Dict]:
     result = None
     is_pdf = False
     
@@ -171,7 +198,7 @@ def fetch_page_text(url: str, use_selenium: bool = False) -> Optional[str]:
         print(f"[1/2] Trying requests for {url}...")
         result, is_pdf = fetch_with_requests(url)
     
-    if result is None and not is_pdf:
+    if (result is None or result == "") and not is_pdf:
         print(f"[2/2] Falling back to Selenium for {url}...")
         html = fetch_with_selenium(url)
         if html:
@@ -180,12 +207,27 @@ def fetch_page_text(url: str, use_selenium: bool = False) -> Optional[str]:
     if result:
         if is_pdf:
             print(f"[+] Successfully extracted {len(result)} characters from PDF: {url}")
-            return f"{url} — {result}"
+            title = extract_title(text=result)
+            return {
+                "url": url,
+                "type": "pdf",
+                "title": title,
+                "content": result,
+                "length": len(result),
+                "timestamp": time.time()
+            }
         else:
             try:
-                text = extract_text_from_html(result)
+                text, title = extract_text_from_html(result)
                 print(f"[+] Successfully extracted {len(text)} characters from {url}")
-                return f"{url} — {text}"
+                return {
+                    "url": url,
+                    "type": "html",
+                    "title": title,
+                    "content": text,
+                    "length": len(text),
+                    "timestamp": time.time()
+                }
             except Exception as e:
                 print(f"[!] Failed to parse HTML from {url}: {e}")
                 return None

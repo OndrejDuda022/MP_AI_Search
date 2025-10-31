@@ -39,9 +39,13 @@ def main():
         if content:
             contents.append(content)
 
-    #display fetched content previews
-    for i, content in enumerate(contents):
-        print(f"Content {i + 1} (first 100 chars): {content[:100]}")
+    #display fetched content previews - TO BE REMOVED
+    for i, source in enumerate(contents, 1):
+        print(f"Source {i}:")
+        print(f"  Title: {source.get('title', 'N/A')}")
+        print(f"  Type: {source.get('type', 'N/A')}")
+        print(f"  Length: {source.get('length', 0)} chars")
+        print(f"  Preview: {source.get('content', '')[:100]}...")
 
     #process contents with AI
     response = process_with_ai(contents, query)

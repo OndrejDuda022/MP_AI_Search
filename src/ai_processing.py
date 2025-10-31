@@ -3,7 +3,7 @@ import requests
 import json
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from typing import List
+from typing import List, Dict
 
 load_dotenv()
 
@@ -110,6 +110,27 @@ def generate_search_queries(user_input, language="auto"):
     
     return parsed_result.queries[:3]  #max 3 queries
 
+#format structured data for AI consumption
+def format_sources(data_list: List[Dict], max_content_length: int = 3000) -> str:
+    formatted_sources = []
+    
+    for idx, source in enumerate(data_list, 1):
+        content = source.get('content', '')
+        if len(content) > max_content_length:
+            content = content[:max_content_length] + "... [content truncated]"
+        
+        formatted_sources.append(
+            f"[Source {idx}]\n"
+            f"URL: {source.get('url', 'Unknown')}\n"
+            f"Title: {source.get('title', 'Untitled')}\n"
+            f"Type: {source.get('type', 'unknown')}\n"
+            f"Content Length: {source.get('length', 0)} characters\n"
+            f"Content:\n{content}\n"
+            f"{'=' * 80}\n"
+        )
+    
+    return "\n".join(formatted_sources)
+
 #process data with AI to generate structured response
 def process_with_ai(data, user_query="", language="auto"):
     api_key = os.getenv("AI_API_KEY")
@@ -132,6 +153,12 @@ def process_with_ai(data, user_query="", language="auto"):
     
     lang_instruction = language_instructions.get(language, language_instructions["auto"])
     
+    formatted_data = format_sources(data)
+    sources_instruction = (
+        "When citing information, reference sources using the format '[Source X]' where X is the source number. "
+        "In the 'sources_used' field, include the actual URLs of sources you referenced."
+    )
+    
     payload = {
         "messages": [
             {
@@ -142,8 +169,9 @@ def process_with_ai(data, user_query="", language="auto"):
                     "Extract key points relevant to the question, count how many sources you used, "
                     "and assess your confidence level based on the quality and relevance of the sources. "
                     "If the information is insufficient to answer the question, state this clearly. "
+                    f"{sources_instruction} "
                     f"{lang_instruction}\n\n"
-                    f"Available sources:\n{data}"
+                    f"Available sources:\n{formatted_data}"
                 )
             },
             {

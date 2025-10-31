@@ -93,5 +93,5 @@ if __name__ == "__main__":
     #test_google_search()
     #test_google_search_with_content()
     #test_page_scrape()
-    #test_selenium_fallback()
-    test_force_selenium()
+    test_selenium_fallback()
+    #test_force_selenium()
