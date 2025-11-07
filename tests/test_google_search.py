@@ -10,11 +10,11 @@ from page_search import search_google, fetch_page_text
 
 #test google search
 def test_google_search():
-    query = "as4u"
+    query = "pdf"
 
     results = search_google([query], max=10)
 
-    output_file = "test_google_results.json"
+    output_file = "debug/test_google_results.json"
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=4)
 
@@ -90,8 +90,8 @@ def test_force_selenium():
         print(f"Failed to fetch {url}")
 
 if __name__ == "__main__":
-    #test_google_search()
+    test_google_search()
     #test_google_search_with_content()
     #test_page_scrape()
-    test_selenium_fallback()
+    #test_selenium_fallback()
     #test_force_selenium()
