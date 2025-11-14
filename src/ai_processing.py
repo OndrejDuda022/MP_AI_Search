@@ -22,9 +22,10 @@ class AIResponse(BaseModel):
 #generate search queries based on user input
 def generate_search_queries(user_input, language="auto"):
     api_key = os.getenv("AI_API_KEY")
+    company = os.getenv("TARGET_DOMAIN")
 
     if not api_key:
-        raise ValueError("Missing AI API key in environment variables. Cannot generate search queries.")
+        raise ValueError("[!] Missing AI API key in environment variables. Cannot generate search queries.")
 
     url = "https://chetty-api.mateides.com/chat/completions"
     headers = {
@@ -45,14 +46,59 @@ def generate_search_queries(user_input, language="auto"):
             {
                 "role": "system",
                 "content": (
-                    "You are a search query generator employed in the AI search tool of the company as4u.cz s.r.o." 
-                    "Analyze user input and generate up to 3 Google search queries in correlation with as4u.cz." 
-                    "(e.g., 'Do you have any branch offices?' -> 'as4u branch offices', 'as4u contact information', etc.) "
-                    "Determine if the input is appropriate. Consider inappropriate: personal data, confidential information, "
-                    "illegal activities, requests for backend internals (SQL, code snippets). "
-                    "If input is already a well-formed search query (keywords, specific phrases, no complete sentences), "
-                    "return it as the primary query and generate fewer alternatives if needed. "
-                    f"{lang_instruction}"
+                    f"You are an expert search query generator for {company}'s AI search system. "
+                    f"Your task is to transform user questions into effective Google search queries.\n\n"
+                    
+                    f"## CORE RULES:\n"
+                    f"1. Generate 2-4 diverse queries targeting DIFFERENT information angles\n"
+                    f"2. Always include '{company}' in each query (unless already present)\n"
+                    f"3. Use natural language phrases that appear on real websites\n"
+                    f"4. Combine specific + broad keywords for comprehensive coverage\n"
+                    f"5. Think like a search engine: use terms from page titles, headings, meta descriptions\n"
+                    f"6. {lang_instruction}\n\n"
+                    
+                    f"## EFFECTIVE QUERY PATTERNS:\n"
+                    f"Different information sources: official page, contact page, about page, FAQ\n"
+                    f"Different keyword types: formal terms, colloquial phrases, action words\n"
+                    f"Different specificity levels: broad category, specific feature, detailed attribute\n"
+                    f"Related context: location-based, service-based, category-based\n\n"
+                    
+                    f"## QUERY GENERATION EXAMPLES:\n"
+                    f"User: 'Do you have branch offices?'\n"
+                    f"→ ['{company} branches contact',  # Official contact info\n"
+                    f"    '{company} where to find us',  # Natural FAQ phrase\n"
+                    f"    '{company} branch network map']  # Geographic coverage\n\n"
+                    
+                    f"User: 'What are your opening hours?'\n"
+                    f"→ ['{company} opening hours',     # Direct term\n"
+                    f"    '{company} weekend hours',      # Specific aspect\n"
+                    f"    '{company} contact working hours']  # Contact page context\n\n"
+                    
+                    f"User: 'pricing for premium plan'\n"
+                    f"→ ['{company} pricing premium plan',   # Pricing page term\n"
+                    f"    '{company} premium price monthly',  # Specific detail\n"
+                    f"    '{company} premium package cost']  # Natural question\n\n"
+                    
+                    f"User: 'How do I contact support?'\n"
+                    f"→ ['{company} customer support contact',  # Official support page\n"
+                    f"    '{company} technical help email',      # Specific channel\n"
+                    f"    '{company} helpdesk chat']              # Alternative channel\n\n"
+                    
+                    f"## APPROPRIATENESS CHECK:\n"
+                    f"Mark as INAPPROPRIATE (is_appropriate=false) if the input:\n"
+                    f"- Requests personal/confidential data (passwords, private info, internal documents)\n"
+                    f"- Contains illegal/harmful content (hacking, violence, discrimination)\n"
+                    f"- Asks for technical internals (SQL queries, API keys, source code)\n"
+                    f"- Is completely off-topic or spam\n\n"
+                    f"Mark as APPROPRIATE (is_appropriate=true) if the input:\n"
+                    f"- Asks about company info, products, services, contact details\n"
+                    f"- Seeks public information (pricing, locations, support)\n"
+                    f"- Is a general customer inquiry\n\n"
+                    
+                    f"## SPECIAL CASES:\n"
+                    f"- If input is already a search query (keywords only), use it as-is and add 1-2 variations\n"
+                    f"- If question has multiple sub-questions, generate queries for each part\n"
+                    f"- For vague questions, create broader queries to capture relevant results"
                 )
             },
             {
@@ -71,7 +117,7 @@ def generate_search_queries(user_input, language="auto"):
                         "queries": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "List of 1-3 search queries"
+                            "description": "List of search queries"
                         },
                         "is_appropriate": {
                             "type": "boolean",
@@ -89,7 +135,7 @@ def generate_search_queries(user_input, language="auto"):
         }
     }
 
-    print("Sending request to AI API for queries...")
+    print("[*] Sending request to AI API for queries...")
     response = requests.post(url, headers=headers, json=payload)
     response.raise_for_status()
 
@@ -105,10 +151,10 @@ def generate_search_queries(user_input, language="auto"):
     parsed_result = SearchQueries(**json.loads(result_content))
     
     if not parsed_result.is_appropriate:
-        print(f"Inappropriate input detected: {parsed_result.reason}")
+        print(f"[!] Inappropriate input detected: {parsed_result.reason}")
         return None
     
-    return parsed_result.queries[:3]  #max 3 queries
+    return parsed_result.queries
 
 #format structured data for AI consumption
 def format_sources(data_list: List[Dict], max_content_length: int = 3000) -> str:
@@ -134,9 +180,10 @@ def format_sources(data_list: List[Dict], max_content_length: int = 3000) -> str
 #process data with AI to generate structured response
 def process_with_ai(data, user_query="", language="auto"):
     api_key = os.getenv("AI_API_KEY")
+    company = os.getenv("TARGET_DOMAIN")
 
     if not api_key:
-        raise ValueError("Missing AI API key in environment variables. Cannot request AI processing.")
+        raise ValueError("[!] Missing AI API key in environment variables. Cannot request AI processing.")
 
     url = "https://chetty-api.mateides.com/chat/completions"
     headers = {
@@ -154,29 +201,49 @@ def process_with_ai(data, user_query="", language="auto"):
     lang_instruction = language_instructions.get(language, language_instructions["auto"])
     
     formatted_data = format_sources(data)
-    sources_instruction = (
-        "When citing information, reference sources using the format '[Source X]' where X is the source number. "
-        "In the 'sources_used' field, include the actual URLs of sources you referenced."
-    )
     
     payload = {
         "messages": [
             {
                 "role": "system",
                 "content": (
-                    "You are a helpful assistant of the company as4u.cz s.r.o. that answers user questions based on provided data from as4u.cz domain. "
-                    "Answer the user's question clearly and concisely using only the information from the provided sources. "
-                    "Extract key points relevant to the question, count how many sources you used, "
-                    "and assess your confidence level based on the quality and relevance of the sources. "
-                    "If the information is insufficient to answer the question, state this clearly. "
-                    f"{sources_instruction} "
-                    f"{lang_instruction}\n\n"
-                    f"Available sources:\n{formatted_data}"
+                    f"You are {company}'s AI assistant. Your role is to provide accurate, helpful answers based solely on the provided sources.\n\n"
+                    
+                    f"## YOUR TASK:\n"
+                    f"Analyze the sources and answer the user's question with precision and clarity.\n\n"
+                    
+                    f"## ANSWER GUIDELINES:\n"
+                    f"1. **Use ONLY information from the provided sources** - never add external knowledge\n"
+                    f"2. **Cite sources** using format '[Source X]' when referencing specific information\n"
+                    f"3. **Be concise** - provide direct answers, avoid unnecessary elaboration\n"
+                    f"4. **Be honest** - if sources don't contain the answer, clearly state this\n"
+                    f"5. {lang_instruction}\n\n"
+                    
+                    f"## KEY POINTS EXTRACTION:\n"
+                    f"- Extract 3-5 key points (fewer if information is limited, more only if critical)\n"
+                    f"- Prioritize: direct answers > supporting details > context\n"
+                    f"- Each key point should be specific and actionable\n"
+                    f"- Include relevant numbers, dates, or specifics when available\n\n"
+                    
+                    f"## CONFIDENCE ASSESSMENT:\n"
+                    f"Set confidence level based on:\n"
+                    f"- **HIGH**: Multiple sources confirm the answer, information is detailed and recent\n"
+                    f"- **MEDIUM**: Answer found but limited sources, some gaps in information, or slightly outdated\n"
+                    f"- **LOW**: Minimal relevant information, sources tangentially related, or conflicting data\n\n"
+                    
+                    f"## HANDLING EDGE CASES:\n"
+                    f"- **Conflicting sources**: Mention both viewpoints, cite each source, set confidence to MEDIUM or LOW\n"
+                    f"- **No relevant info**: State clearly 'The provided sources do not contain information about...'\n"
+                    f"- **Partial answer**: Provide what you can, explicitly note what's missing\n"
+                    f"- **Outdated info**: Mention if sources appear old, adjust confidence accordingly\n\n"
+                    
+                    f"## SOURCES_USED FIELD:\n"
+                    f"Include only the URLs of sources you actually referenced in your answer (not all provided sources)."
                 )
             },
             {
                 "role": "user",
-                "content": user_query
+                "content": f"## AVAILABLE SOURCES:\n{formatted_data}\n\n## USER QUESTION:\n{user_query}"
             }
         ],
         "response_format": {
@@ -214,7 +281,7 @@ def process_with_ai(data, user_query="", language="auto"):
         }
     }
 
-    print("Sending request to AI API for summarization...")
+    print("[*] Sending request to AI API for summarization...")
     response = requests.post(url, headers=headers, json=payload)
     response.raise_for_status()
     

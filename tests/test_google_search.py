@@ -10,7 +10,7 @@ from page_search import search_google, fetch_page_text
 
 #test google search
 def test_google_search():
-    query = "pdf"
+    query = "prumyslovka liberec sídlo"
 
     results = search_google([query], max=10)
 

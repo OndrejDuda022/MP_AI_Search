@@ -16,7 +16,7 @@ def search_google(queries, max=3, disregard_files=False):
     search_engine_id = os.getenv("SEARCH_ENGINE_ID")
 
     if not api_key or not search_engine_id:
-        raise ValueError("Missing Google API key or Search Engine ID in environment variables.")
+        raise ValueError("[!] Missing Google API key or Search Engine ID in environment variables.")
 
     service = build("customsearch", "v1", developerKey=api_key)
     all_urls = []
@@ -33,6 +33,7 @@ def search_google(queries, max=3, disregard_files=False):
                 #skip those weird pdfs that pop up from who knows where
                 url_lower = url.lower()
                 if 'file.php' in url_lower or '.pdf' in url_lower or '.doc' in url_lower or '.docx' in url_lower:
+                    print(f"[*] Skipping file URL: {url}")
                     continue
             
             urls.append(url)
@@ -91,7 +92,7 @@ def fetch_with_requests(url: str, timeout: int = 10) -> Optional[tuple[str, bool
         
         #check if PDF
         if is_pdf_content(response):
-            print(f"PDF detected: {url}")
+            print(f"[*] PDF detected: {url}")
             text = extract_text_from_pdf(response.content)
             return (text, True)
 

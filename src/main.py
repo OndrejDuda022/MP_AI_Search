@@ -11,37 +11,38 @@ from src.ai_processing import process_with_ai, generate_search_queries
 
 #main function
 def main():
-    query = input("Enter your search query: ")
+    query = input("[*] Enter your search query: ")
 
     #generate search queries using AI
     search_queries = generate_search_queries(query)
     if not search_queries:
-        print("The input query was deemed inappropriate. Process terminated.")
+        print("[!] The input query was deemed inappropriate. Process terminated.")
         return
-    print("Generated search queries:", search_queries)
+    print("[*] Generated search queries:", search_queries)
 
     #search google
     urls = search_google(search_queries, disregard_files=True)
     if not urls:
-        print("No results found. Process terminated.")
+        print("[!] No results found. Process terminated.")
         return
     
     #remove duplicate URLs
     urls = list(dict.fromkeys(urls))
-    print(f"Fetched URLs: {len(urls)}")
+    print(f"[*] Fetched URLs: {len(urls)}")
     for url in urls:
         print(f" - {url}")
 
     #fetch page contents
     contents = []
     for url in urls:
-        content = fetch_page_text(url)
+        content = fetch_page_text(url, use_selenium=True)
         if content:
             contents.append(content)
 
     #display fetched content previews - TO BE REMOVED
     for i, source in enumerate(contents, 1):
         print(f"Source {i}:")
+        print(f"  URL: {source.get('url', 'N/A')}")
         print(f"  Title: {source.get('title', 'N/A')}")
         print(f"  Type: {source.get('type', 'N/A')}")
         print(f"  Length: {source.get('length', 0)} chars")
