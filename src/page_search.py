@@ -37,7 +37,7 @@ def search_google(queries, max=3, disregard_files=False):
                     continue
             
             urls.append(url)
-            if len(urls) >= max:
+            if len(urls) == max:
                 break
         
         all_urls.extend(urls)
