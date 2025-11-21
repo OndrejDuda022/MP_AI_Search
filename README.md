@@ -15,8 +15,11 @@ An intelligent search system that combines Google Custom Search API with advance
   - Fast HTTP requests for standard pages
   - Selenium WebDriver fallback for anti-bot sites
 - **Multi-format support:**
-  - HTML pages with smart content extraction
+  - HTML pages with smart content extraction (text or structured HTML)
   - PDF documents with text extraction
+- **Configurable extraction modes:**
+  - `text`: Plain text extraction (faster, smaller token usage)
+  - `html`: Cleaned HTML structure (better context, semantic hierarchy)
 
 ### **AI-Powered Summarization**
 - Analyzes scraped content and generates structured responses
@@ -81,6 +84,10 @@ AI_API_KEY=your_ai_api_key
 
 # Target Domain (optional - for domain-specific searches)
 TARGET_DOMAIN=your-company.com
+
+# Content Extraction Mode (optional - default: text)
+# Options: 'text' (plain text) or 'html' (structured HTML)
+EXTRACT_MODE=text
 
 # Python Path (if needed)
 PYTHONPATH=./src

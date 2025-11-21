@@ -89,7 +89,7 @@ def generate_search_queries(user_input, language="auto"):
                     f"- Requests personal/confidential data (passwords, private info, internal documents)\n"
                     f"- Contains illegal/harmful content (hacking, violence, discrimination)\n"
                     f"- Asks for technical internals (SQL queries, API keys, source code)\n"
-                    f"- Is completely off-topic or spam\n\n"
+                    f"- Is completely off-topic, irrelevant to {company} or spam\n\n"
                     f"Mark as APPROPRIATE (is_appropriate=true) if the input:\n"
                     f"- Asks about company info, products, services, contact details\n"
                     f"- Seeks public information (pricing, locations, support)\n"
@@ -178,7 +178,7 @@ def format_sources(data_list: List[Dict], max_content_length: int = 3000) -> str
     return "\n".join(formatted_sources)
 
 #process data with AI to generate structured response
-def process_with_ai(data, user_query="", language="auto"):
+def process_with_ai(data, user_query="", language="auto", format="text"):
     api_key = os.getenv("AI_API_KEY")
     company = os.getenv("TARGET_DOMAIN")
 
@@ -202,6 +202,19 @@ def process_with_ai(data, user_query="", language="auto"):
     
     formatted_data = format_sources(data)
     
+    #detect if we're working with HTML structured content
+    if format == "html":
+        html_instruction = {
+            "\n\n## CONTENT FORMAT:\n"
+            "The source content is provided as cleaned HTML with semantic structure preserved.\n"
+            "- Use HTML tags (h1-h6, ul, ol, table, etc.) to understand information hierarchy\n"
+            "- Pay attention to headings for main topics and structure\n"
+            "- Tables contain structured data - extract them carefully\n"
+            "- Links (<a>) show relationships between topics\n"
+        }
+    else:
+        html_instruction = ""
+    
     payload = {
         "messages": [
             {
@@ -217,7 +230,8 @@ def process_with_ai(data, user_query="", language="auto"):
                     f"2. **Cite sources** using format '[Source X]' when referencing specific information\n"
                     f"3. **Be concise** - provide direct answers, avoid unnecessary elaboration\n"
                     f"4. **Be honest** - if sources don't contain the answer, clearly state this\n"
-                    f"5. {lang_instruction}\n\n"
+                    f"5. {lang_instruction}\n"
+                    f"{html_instruction}\n"
                     
                     f"## KEY POINTS EXTRACTION:\n"
                     f"- Extract 3-5 key points (fewer if information is limited, more only if critical)\n"

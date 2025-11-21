@@ -33,9 +33,11 @@ def main():
         print(f" - {url}")
 
     #fetch page contents
+    use_selenium = os.getenv("FORCE_SELENIUM", "False").lower() == "true"
+    extract_mode = os.getenv("EXTRACT_MODE", "text")
     contents = []
     for url in urls:
-        content = fetch_page_text(url, use_selenium=True)
+        content = fetch_page_text(url, use_selenium=use_selenium, extract_mode=extract_mode)
         if content:
             contents.append(content)
 

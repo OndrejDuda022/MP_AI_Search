@@ -173,25 +173,59 @@ def extract_title(soup: BeautifulSoup = None, text: str = None) -> str:
     return "Untitled"
 
 #get text content from HTML
-def extract_text_from_html(html: str) -> tuple[str, str]:
+def extract_text_from_html(html: str, mode: str = 'text') -> tuple[str, str]:
     soup = BeautifulSoup(html, 'html.parser')
     
     title = extract_title(soup=soup)
     
-    for script in soup(["script", "style"]):
-        script.decompose()
+    for tag in soup(["script", "style", "nav", "footer", "header", "aside", "iframe", "noscript"]):
+        tag.decompose()
     
     main_content = soup.find('main') or soup.find('article') or soup.find('body')
-    if main_content:
-        text = main_content.get_text(separator=' ', strip=True)
-    else:
-        text = soup.get_text(separator=' ', strip=True)
+    if not main_content:
+        main_content = soup
     
-    text = ' '.join(text.split())
-    return text, title
+    if mode == 'html':
+        #clean HTML mode: preserve structure, remove attributes
+        content = clean_html(main_content)
+        return content, title
+    else:
+        #text mode: extract plain text
+        text = main_content.get_text(separator=' ', strip=True)
+        text = ' '.join(text.split())
+        return text, title
+
+#clean HTML while preserving semantic structure
+def clean_html(element) -> str:
+
+    allowed_tags = {'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 
+                   'table', 'tr', 'td', 'th', 'thead', 'tbody',
+                   'a', 'strong', 'em', 'b', 'i', 'br', 'div', 'span', 'section'}
+    
+    clean = BeautifulSoup(str(element), 'html.parser')
+    
+    for tag in clean.find_all():
+        if tag.name not in allowed_tags:
+            tag.unwrap()  #keep content but remove tag
+    
+    for tag in clean.find_all():
+        if tag.name == 'a' and tag.get('href'):
+            attrs = {'href': tag['href']}
+            tag.attrs = attrs
+        else:
+            tag.attrs = {}
+    
+    html_str = str(clean)
+    
+    lines = html_str.split('\n')
+    cleaned_lines = [line for line in lines if line.strip()]
+    html_str = '\n'.join(cleaned_lines)
+    html_str = ' '.join(html_str.split())
+    
+    return html_str.strip()
 
 #main function to fetch page text with fallback
-def fetch_page_text(url: str, use_selenium: bool = False) -> Optional[Dict]:
+def fetch_page_text(url: str, use_selenium: bool = False, extract_mode: str = 'text') -> Optional[Dict]:
     result = None
     is_pdf = False
     
@@ -219,14 +253,15 @@ def fetch_page_text(url: str, use_selenium: bool = False) -> Optional[Dict]:
             }
         else:
             try:
-                text, title = extract_text_from_html(result)
-                print(f"[+] Successfully extracted {len(text)} characters from {url}")
+                content, title = extract_text_from_html(result, mode=extract_mode)
+                content_type = "html_structured" if extract_mode == 'html' else "html"
+                print(f"[+] Successfully extracted {len(content)} characters from {url} (mode: {extract_mode})")
                 return {
                     "url": url,
-                    "type": "html",
+                    "type": content_type,
                     "title": title,
-                    "content": text,
-                    "length": len(text),
+                    "content": content,
+                    "length": len(content),
                     "timestamp": time.time()
                 }
             except Exception as e:
