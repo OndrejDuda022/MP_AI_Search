@@ -2,6 +2,14 @@
 
 An intelligent search system that combines Google Custom Search API with advanced AI processing to deliver precise, context-aware answers to user queries. The system automatically generates optimized search queries, scrapes relevant content, and synthesizes comprehensive responses with source citations.
 
+## Future Improvements
+
+- [ ] Sanitize user input
+- [ ] Implement search retry mechanism for irrelevant results
+- [ ] Add caching layer for frequently accessed pages
+- [ ] Support for more document formats (DOCX, XLSX, etc.)
+- [ ] Add web interface
+
 ## Features
 
 ### **AI-Powered Query Generation**
@@ -144,10 +152,3 @@ python tests/test_ai_processing.py
 # Test Google search and scraping
 python tests/test_google_search.py
 ```
-
-## Future Improvements
-
-- [ ] Implement search retry mechanism for irrelevant results
-- [ ] Add caching layer for frequently accessed pages
-- [ ] Support for more document formats (DOCX, XLSX, etc.)
-- [ ] Add web interface

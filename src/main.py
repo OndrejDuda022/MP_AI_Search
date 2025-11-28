@@ -37,7 +37,7 @@ def main():
     extract_mode = os.getenv("EXTRACT_MODE", "text")
     contents = []
     for url in urls:
-        content = fetch_page_text(url, use_selenium=use_selenium, extract_mode=extract_mode)
+        content = fetch_page_text(url, use_selenium, extract_mode)
         if content:
             contents.append(content)
 

@@ -20,12 +20,13 @@ class AIResponse(BaseModel):
     confidence: str
 
 #generate search queries based on user input
-def generate_search_queries(user_input, language="auto"):
+def generate_search_queries(user_input, language="auto", max_input_length=200) -> List[str]:
     api_key = os.getenv("AI_API_KEY")
-    company = os.getenv("TARGET_DOMAIN")
-
     if not api_key:
         raise ValueError("[!] Missing AI API key in environment variables. Cannot generate search queries.")
+
+    company = os.getenv("TARGET_DOMAIN")
+    user_input = user_input[:max_input_length]
 
     url = "https://chetty-api.mateides.com/chat/completions"
     headers = {
