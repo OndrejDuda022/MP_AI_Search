@@ -97,8 +97,36 @@ TARGET_DOMAIN=your-company.com
 # Options: 'text' (plain text) or 'html' (structured HTML)
 EXTRACT_MODE=text
 
+# Selenium Remote URL (optional)
+# If set, Selenium will use RemoteWebDriver (e.g., Docker container)
+# Example: http://localhost:4444/wd/hub
+# Leave empty to use local ChromeDriver
+SELENIUM_REMOTE_URL=
+
 # Python Path (if needed)
 PYTHONPATH=./src
+```
+
+4. **Optional: Run Selenium in Docker (recommended for security):**
+
+```bash
+# Pull and run Selenium container
+docker pull selenium/standalone-chrome:latest
+
+docker run \
+  --name selenium-chrome \
+  --detach \
+  --rm \
+  --publish 4444:4444 \
+  --shm-size=1g \
+  --cpus="1.5" \
+  --memory="1g" \
+  --security-opt no-new-privileges \
+  --pids-limit 512 \
+  selenium/standalone-chrome:latest
+
+# Then set in .env:
+# SELENIUM_REMOTE_URL=http://localhost:4444/wd/hub
 ```
 
 ## 📖 Usage

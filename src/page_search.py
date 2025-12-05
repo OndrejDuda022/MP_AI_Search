@@ -123,7 +123,15 @@ def fetch_with_selenium(url: str, timeout: int = 15) -> Optional[str]:
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option('useAutomationExtension', False)
         
-        driver = webdriver.Chrome(options=chrome_options)
+        # Check if using remote Selenium 
+        remote_url = os.getenv("SELENIUM_REMOTE_URL")
+        if remote_url:
+            print(f"[*] Using remote Selenium at {remote_url}")
+            driver = webdriver.Remote(command_executor=remote_url, options=chrome_options)
+        else:
+            # Local ChromeDriver 
+            driver = webdriver.Chrome(options=chrome_options)
+        
         driver.set_page_load_timeout(timeout)
         
         try:
