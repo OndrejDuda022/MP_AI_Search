@@ -54,14 +54,11 @@ def generate_search_queries(user_input, language="auto", max_input_length=200) -
                     f"1. Generate 2-4 diverse queries targeting DIFFERENT information angles\n"
                     f"2. Always include '{company}' in each query (unless already present)\n"
                     f"3. Use natural language phrases that appear on real websites\n"
-                    f"4. Combine specific + broad keywords for comprehensive coverage\n"
-                    f"5. Think like a search engine: use terms from page titles, headings, meta descriptions\n"
-                    f"6. {lang_instruction}\n\n"
+                    f"4. Think like a search engine: use terms from page titles, headings, meta descriptions\n"
+                    f"5. {lang_instruction}\n\n"
                     
                     f"## EFFECTIVE QUERY PATTERNS:\n"
                     f"Different information sources: official page, contact page, about page, FAQ\n"
-                    f"Different keyword types: formal terms, colloquial phrases, action words\n"
-                    f"Different specificity levels: broad category, specific feature, detailed attribute\n"
                     f"Related context: location-based, service-based, category-based\n\n"
                     
                     f"## QUERY GENERATION EXAMPLES:\n"
@@ -81,7 +78,7 @@ def generate_search_queries(user_input, language="auto", max_input_length=200) -
                     f"    '{company} premium package cost']  # Natural question\n\n"
                     
                     f"User: 'How do I contact support?'\n"
-                    f"→ ['{company} customer support contact',  # Official support page\n"
+                    f"→ ['{company} customer support',  # Official support page\n"
                     f"    '{company} technical help email',      # Specific channel\n"
                     f"    '{company} helpdesk chat']              # Alternative channel\n\n"
                     
@@ -138,7 +135,12 @@ def generate_search_queries(user_input, language="auto", max_input_length=200) -
 
     print("[*] Sending request to AI API for queries...")
     response = requests.post(url, headers=headers, json=payload)
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as e:
+        print(f"[!] AI API request failed: {e}")
+        print(f"Response content: {response.text}")
+        raise
 
     """TO BE REMOVED
     #save response content as json for debugging
@@ -236,8 +238,6 @@ def process_with_ai(data, user_query="", language="auto", format="text"):
                     
                     f"## KEY POINTS EXTRACTION:\n"
                     f"- Extract 3-5 key points (fewer if information is limited, more only if critical)\n"
-                    f"- Prioritize: direct answers > supporting details > context\n"
-                    f"- Each key point should be specific and actionable\n"
                     f"- Include relevant numbers, dates, or specifics when available\n\n"
                     
                     f"## CONFIDENCE ASSESSMENT:\n"
@@ -298,7 +298,12 @@ def process_with_ai(data, user_query="", language="auto", format="text"):
 
     print("[*] Sending request to AI API for summarization...")
     response = requests.post(url, headers=headers, json=payload)
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as e:
+        print(f"[!] AI API request failed: {e}")
+        print(f"Response content: {response.text}")
+        raise
     
     result_content = response.json()["choices"][0]["message"]["content"]
     
