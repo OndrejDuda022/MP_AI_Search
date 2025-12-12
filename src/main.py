@@ -14,7 +14,14 @@ from src.ai_processing import process_with_ai, generate_search_queries
 def main():
     # Check Selenium container if remote URL is configured
     if not ensure_selenium_container():
-        print("[!] Selenium setup failed. Continuing with local ChromeDriver...")
+        if os.getenv("CONTAIN_SELENIUM", "False").lower() != "true":
+            print("[*] Proceeding without Selenium docker setup. Continuing with local ChromeDriver...")
+        else:
+            if os.getenv("ALLOW_LOCAL_SELENIUM", "False").lower() == "true":
+                print("[!] Selenium container setup failed. Continuing with local ChromeDriver...")
+            else:
+                print("[!] Selenium container setup failed and local Selenium is not allowed. Process terminated.")
+                return
     
     query = input("[*] Enter your search query: ")
 
@@ -83,9 +90,9 @@ def pretty_output(response):
 
 #check and start Selenium container if needed
 def ensure_selenium_container():
-    no_selenium = os.getenv("NO_SELENIUM")
-    if no_selenium and no_selenium.lower() == "true":
-        return True
+    contain_selenium = os.getenv("CONTAIN_SELENIUM")
+    if not contain_selenium.lower() == "true":
+        return False
     
     print("[*] Checking Selenium container...")
     
