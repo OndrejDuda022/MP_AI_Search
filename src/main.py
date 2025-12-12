@@ -1,6 +1,7 @@
 #load necessary libraries
 import os
 import sys
+import subprocess
 from dotenv import load_dotenv
 
 #prepare environment
@@ -11,6 +12,10 @@ from src.ai_processing import process_with_ai, generate_search_queries
 
 #main function
 def main():
+    # Check Selenium container if remote URL is configured
+    if not ensure_selenium_container():
+        print("[!] Selenium setup failed. Continuing with local ChromeDriver...")
+    
     query = input("[*] Enter your search query: ")
 
     #generate search queries using AI
@@ -75,6 +80,59 @@ def pretty_output(response):
     
     print(f"\n[Confidence: {response.confidence}]")
     print("="*60)
+
+#check and start Selenium container if needed
+def ensure_selenium_container():
+    no_selenium = os.getenv("NO_SELENIUM")
+    if no_selenium and no_selenium.lower() == "true":
+        return True
+    
+    print("[*] Checking Selenium container...")
+    
+    try:
+        # Check if Docker is available
+        result = subprocess.run(["docker", "ps"], capture_output=True, text=True, timeout=5)
+        if result.returncode != 0:
+            print("[!] Docker is not running. Please start Docker Desktop or remove SELENIUM_REMOTE_URL from .env")
+            return False
+        
+        # Check if selenium-chrome container is running
+        result = subprocess.run(
+            ["docker", "ps", "--filter", "name=selenium-chrome", "--format", "{{.Names}}"],
+            capture_output=True, text=True, timeout=5
+        )
+        
+        if "selenium-chrome" in result.stdout:
+            print("[+] Selenium container is already running")
+            return True
+        
+        # Try to start the container
+        print("[*] Starting Selenium container...")
+        if sys.platform == "win32":
+            # Use PowerShell script on Windows
+            script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src/scripts/start_selenium.ps1")
+            if os.path.exists(script_path):
+                result = subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", script_path], 
+                                      capture_output=True, text=True, timeout=30)
+                if result.returncode == 0:
+                    print("[+] Selenium container started successfully")
+                    return True
+                else:
+                    print(f"[!] Failed to start container: {result.stderr}")
+                    return False
+        
+        print("[!] Please run './start_selenium.ps1' manually or check Docker setup")
+        return False
+        
+    except FileNotFoundError:
+        print("[!] Docker is not installed. Please install Docker or use local ChromeDriver")
+        return False
+    except subprocess.TimeoutExpired:
+        print("[!] Docker command timed out")
+        return False
+    except Exception as e:
+        print(f"[!] Error checking Selenium: {e}")
+        return False
 
 #execute main function
 if __name__ == "__main__":

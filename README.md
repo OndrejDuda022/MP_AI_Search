@@ -109,6 +109,16 @@ PYTHONPATH=./src
 
 4. **Optional: Run Selenium in Docker (recommended for security):**
 
+**Automated startup (recommended):**
+```powershell
+# Automatically checks, pulls, and starts Selenium container
+.\start_selenium.ps1
+
+# To stop the container
+.\stop_selenium.ps1
+```
+
+**Manual startup:**
 ```bash
 # Pull and run Selenium container
 docker pull selenium/standalone-chrome:latest
