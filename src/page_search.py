@@ -1,5 +1,6 @@
 import os
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from dotenv import load_dotenv
 import requests
 from bs4 import BeautifulSoup
@@ -55,12 +56,24 @@ def is_pdf_content(response: requests.Response) -> bool:
     
     return False
 
-def extract_text_from_pdf(pdf_content: bytes) -> Optional[str]:
+def extract_text_from_pdf(pdf_content: bytes, max_pages: int = 50, max_size_mb: int = 10) -> Optional[str]:
     try:
+        # Check file size limit
+        size_mb = len(pdf_content) / (1024 * 1024)
+        if size_mb > max_size_mb:
+            print(f"[!] PDF too large: {size_mb:.1f}MB (max {max_size_mb}MB)")
+            return None
+        
         text_parts = []
         
         with pdfplumber.open(io.BytesIO(pdf_content)) as pdf:
-            for page in pdf.pages:
+            page_count = len(pdf.pages)
+            if page_count > max_pages:
+                print(f"[*] PDF has {page_count} pages, limiting to first {max_pages}")
+            
+            for i, page in enumerate(pdf.pages):
+                if i >= max_pages:
+                    break
                 page_text = page.extract_text()
                 if page_text:
                     text_parts.append(page_text)
@@ -75,7 +88,7 @@ def extract_text_from_pdf(pdf_content: bytes) -> Optional[str]:
         return None
 
 #1st attempt: fetch page using requests
-def fetch_with_requests(url: str, timeout: int = 10) -> Optional[tuple[str, bool]]:
+def fetch_with_requests(url: str, timeout: int = 10, max_size_mb: int = 10) -> Optional[tuple[str, bool]]:
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
@@ -87,18 +100,44 @@ def fetch_with_requests(url: str, timeout: int = 10) -> Optional[tuple[str, bool
             'Upgrade-Insecure-Requests': '1'
         }
 
-        response = requests.get(url, headers=headers, timeout=timeout)
+        response = requests.get(url, headers=headers, timeout=timeout, stream=True)
+        
+        # Check content size before downloading
+        content_length = response.headers.get('Content-Length')
+        if content_length:
+            size_mb = int(content_length) / (1024 * 1024)
+            if size_mb > max_size_mb:
+                print(f"[!] Content too large: {size_mb:.1f}MB (max {max_size_mb}MB)")
+                return (None, False)
+        
         response.raise_for_status()
         
+        # Download content with size limit
+        content = b''
+        max_bytes = max_size_mb * 1024 * 1024
+        for chunk in response.iter_content(chunk_size=8192):
+            content += chunk
+            if len(content) > max_bytes:
+                print(f"[!] Content exceeded {max_size_mb}MB, truncating")
+                break
+        
         #check if PDF
-        if is_pdf_content(response):
+        if content[:4] == b'%PDF' or response.headers.get('Content-Type', '').lower().startswith('application/pdf'):
             print(f"[*] PDF detected: {url}")
-            text = extract_text_from_pdf(response.content)
+            text = extract_text_from_pdf(content)
             return (text, True)
 
         #HTML content
-        response.encoding = response.apparent_encoding or 'utf-8'
-        return (response.text, False)
+        try:
+            text = content.decode('utf-8')
+        except UnicodeDecodeError:
+            try:
+                text = content.decode('latin-1')
+            except:
+                print(f"[!] Failed to decode content from {url}")
+                return (None, False)
+        
+        return (text, False)
         
     except requests.RequestException as e:
         print(f"[!] Requests failed for {url}: {e}")
@@ -180,13 +219,23 @@ def extract_title(soup: BeautifulSoup = None, text: str = None) -> str:
     return "Untitled"
 
 #get text content from HTML
-def extract_text_from_html(html: str, mode: str = 'text') -> tuple[str, str]:
-    soup = BeautifulSoup(html, 'html.parser')
-    
-    title = extract_title(soup=soup)
-    
-    for tag in soup(["script", "style", "nav", "footer", "header", "aside", "iframe", "noscript"]):
-        tag.decompose()
+def extract_text_from_html(html: str, mode: str = 'text', max_size_mb: int = 5) -> tuple[str, str]:
+    try:
+        # Check HTML size limit
+        size_mb = len(html.encode('utf-8')) / (1024 * 1024)
+        if size_mb > max_size_mb:
+            print(f"[!] HTML too large: {size_mb:.1f}MB (max {max_size_mb}MB), truncating...")
+            html = html[:max_size_mb * 1024 * 1024]
+        
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        title = extract_title(soup=soup)
+        
+        for tag in soup(["script", "style", "nav", "footer", "header", "aside", "iframe", "noscript"]):
+            tag.decompose()
+    except Exception as e:
+        print(f"[!] Error parsing HTML: {e}")
+        return ("", "Error")
     
     main_content = soup.find('main') or soup.find('article') or soup.find('body')
     if not main_content:

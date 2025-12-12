@@ -1,6 +1,7 @@
 import os
 import requests
 import json
+import re
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from typing import List, Dict
@@ -20,12 +21,15 @@ class AIResponse(BaseModel):
     confidence: str
 
 #generate search queries based on user input
-def generate_search_queries(user_input, language="auto", max_input_length=200) -> List[str]:
+def generate_search_queries(user_input, language="auto", max_input_length=500) -> List[str]:
     api_key = os.getenv("AI_API_KEY")
     if not api_key:
         raise ValueError("[!] Missing AI API key in environment variables. Cannot generate search queries.")
 
     company = os.getenv("TARGET_DOMAIN")
+    
+    # Sanitize and limit user input
+    user_input = sanitize_user_input(user_input)
     user_input = user_input[:max_input_length]
 
     url = "https://chetty-api.mateides.com/chat/completions"
@@ -142,13 +146,6 @@ def generate_search_queries(user_input, language="auto", max_input_length=200) -
         print(f"Response content: {response.text}")
         raise
 
-    """TO BE REMOVED
-    #save response content as json for debugging
-    output_file = "debug/debug_generated_search_queries_response.json"
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(response.json(), f, ensure_ascii=False, indent=4)
-    """  
-
     result_content = response.json()["choices"][0]["message"]["content"]
     
     parsed_result = SearchQueries(**json.loads(result_content))
@@ -160,13 +157,15 @@ def generate_search_queries(user_input, language="auto", max_input_length=200) -
     return parsed_result.queries
 
 #format structured data for AI consumption
-def format_sources(data_list: List[Dict], max_content_length: int = 3000) -> str:
+def format_sources(data_list: List[Dict]) -> str:
     formatted_sources = []
     
     for idx, source in enumerate(data_list, 1):
         content = source.get('content', '')
-        if len(content) > max_content_length:
-            content = content[:max_content_length] + "... [content truncated]"
+        
+        # Sanitize scraped content
+        content = sanitize_scraped_content(content)
+        
         
         formatted_sources.append(
             f"[Source {idx}]\n"
@@ -187,6 +186,9 @@ def process_with_ai(data, user_query="", language="auto", format="text"):
 
     if not api_key:
         raise ValueError("[!] Missing AI API key in environment variables. Cannot request AI processing.")
+
+    # Sanitize user query
+    user_query = sanitize_user_input(user_query)
 
     url = "https://chetty-api.mateides.com/chat/completions"
     headers = {
@@ -310,3 +312,38 @@ def process_with_ai(data, user_query="", language="auto", format="text"):
     parsed_result = AIResponse(**json.loads(result_content))
     
     return parsed_result
+
+#sanitize user input - remove potentially harmful characters
+def sanitize_user_input(text: str) -> str:
+    if not text:
+        return ""
+    
+    # Remove control characters except newline, tab, carriage return
+    text = re.sub(r'[\x00-\x08\x0b-\x0c\x0e-\x1f\x7f-\x9f]', '', text)
+    
+    # Remove common injection patterns
+    text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r'javascript:', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'on\w+\s*=', '', text, flags=re.IGNORECASE)  # onclick, onerror, etc.
+    
+    # Normalize whitespace
+    text = ' '.join(text.split())
+    
+    return text.strip()
+
+#sanitize scraped content - remove potentially harmful or useless content
+def sanitize_scraped_content(text: str) -> str:
+    if not text:
+        return ""
+    
+    # Remove control characters
+    text = re.sub(r'[\x00-\x08\x0b-\x0c\x0e-\x1f\x7f-\x9f]', '', text)
+    
+    # Remove excessive whitespace but preserve structure
+    text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)  # Max 2 consecutive newlines
+    text = re.sub(r' +', ' ', text)  # Multiple spaces to single space
+    
+    # Remove common noise patterns
+    text = re.sub(r'(cookies?|gdpr|privacy policy)\s+(accept|consent|agree)', '', text, flags=re.IGNORECASE)
+    
+    return text.strip()

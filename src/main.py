@@ -23,9 +23,18 @@ def main():
                 print("[!] Selenium container setup failed and local Selenium is not allowed. Process terminated.")
                 return
     
-    query = input("[*] Enter your search query: ")
+    query = input("[*] Enter your search query: ").strip()
+    
+    # Basic input validation
+    if not query:
+        print("[!] Empty query. Process terminated.")
+        return
+    
+    if len(query) > 500:
+        print("[!] Query too long (max 500 characters). Process terminated.")
+        return
 
-    #generate search queries using AI
+    #generate search queries using AI (already sanitizes internally)
     search_queries = generate_search_queries(query)
     if not search_queries:
         print("[!] The input query was deemed inappropriate. Process terminated.")
