@@ -73,14 +73,9 @@ cd MP_AI_Search
 
 2. **Install dependencies:**
 
-**Option A: Standard installation (recommended for users)**
+**Standard installation (recommended for users)**
 ```bash
 pip install -r requirements.txt
-```
-
-**Option B: Editable installation (recommended for developers)**
-```bash
-pip install -e .
 ```
 
 This installs all dependencies from [setup.py](setup.py) including:
@@ -92,11 +87,6 @@ This installs all dependencies from [setup.py](setup.py) including:
 - `selenium` - Web automation
 - `webdriver-manager` - ChromeDriver management
 - `pdfplumber` - PDF text extraction
-
-**Development dependencies:**
-```bash
-pip install -e ".[dev]"  # Includes pytest and pytest-cov
-```
 
 3. **Configure environment variables:**
 
