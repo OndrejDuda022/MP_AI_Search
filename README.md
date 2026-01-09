@@ -2,9 +2,8 @@
 
 An intelligent search system that combines Google Custom Search API with advanced AI processing to deliver precise, context-aware answers to user queries. The system automatically generates optimized search queries, scrapes relevant content, and synthesizes comprehensive responses with source citations.
 
-## Future Improvements
+## Possible Future Improvements
 
-- [ ] Sanitize user input
 - [ ] Implement search retry mechanism for irrelevant results
 - [ ] Add caching layer for frequently accessed pages
 - [ ] Support for more document formats (DOCX, XLSX, etc.)
@@ -21,7 +20,7 @@ An intelligent search system that combines Google Custom Search API with advance
 ### **Intelligent Web Scraping**
 - **Dual-mode content extraction:**
   - Fast HTTP requests for standard pages
-  - Selenium WebDriver fallback for anti-bot sites
+  - Selenium WebDriver fallback for anti-bot or dynamic sites
 - **Multi-format support:**
   - HTML pages with smart content extraction (text or structured HTML)
   - PDF documents with text extraction
@@ -56,27 +55,47 @@ Structured Answer with Citations
 ## 🛠️ Installation
 
 ### Prerequisites
-- Python 3.8 or higher
-- Google Custom Search API credentials
-- AI API access (ChettyAI or compatible endpoint)
-- Chrome/Chromium browser (for Selenium)
+- **Python 3.8 or higher**
+- **Google Custom Search API credentials**
+  - API Key from Google Cloud Console
+  - Search Engine ID from Programmable Search Engine
+- **AI API access** (ChettyAI or compatible endpoint)
+- **Docker** (optional, recommended for Selenium)
+- **Chrome/Chromium browser** (for local Selenium fallback)
 
 ### Setup
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/OndrejDuda022/AI_Search.git
-cd AI_Search
+git clone https://github.com/OndrejDuda022/MP_AI_Search.git
+cd MP_AI_Search
 ```
 
 2. **Install dependencies:**
+
+**Option A: Standard installation (recommended for users)**
 ```bash
 pip install -r requirements.txt
 ```
 
-Or install in development mode:
+**Option B: Editable installation (recommended for developers)**
 ```bash
 pip install -e .
+```
+
+This installs all dependencies from [setup.py](setup.py) including:
+- `google-api-python-client` - Google Custom Search API
+- `python-dotenv` - Environment variable management
+- `pydantic` - Data validation
+- `requests` - HTTP requests
+- `beautifulsoup4` - HTML parsing
+- `selenium` - Web automation
+- `webdriver-manager` - ChromeDriver management
+- `pdfplumber` - PDF text extraction
+
+**Development dependencies:**
+```bash
+pip install -e ".[dev]"  # Includes pytest and pytest-cov
 ```
 
 3. **Configure environment variables:**
@@ -107,18 +126,24 @@ SELENIUM_REMOTE_URL=
 PYTHONPATH=./src
 ```
 
-4. **Optional: Run Selenium in Docker (recommended for security):**
+4. **Setup Selenium (optional but recommended):**
 
-**Automated startup (recommended):**
+**Option A: Automated Docker setup (Windows - recommended)**
 ```powershell
-# Automatically checks, pulls, and starts Selenium container
-.\start_selenium.ps1
+# Start Selenium container (automatically pulls image if needed)
+.\src\scripts\start_selenium.ps1
 
-# To stop the container
-.\stop_selenium.ps1
+# Stop the container when done
+.\src\scripts\stop_selenium.ps1
 ```
 
-**Manual startup:**
+The script automatically:
+- Checks if Docker is running
+- Pulls `selenium/standalone-chrome:latest` if not present
+- Creates and starts the container with security constraints
+- Configures resource limits (1.5 CPU cores, 1GB RAM)
+
+**Option B: Manual Docker setup (Linux/Mac)**
 ```bash
 # Pull and run Selenium container
 docker pull selenium/standalone-chrome:latest
@@ -134,10 +159,16 @@ docker run \
   --security-opt no-new-privileges \
   --pids-limit 512 \
   selenium/standalone-chrome:latest
-
-# Then set in .env:
-# SELENIUM_REMOTE_URL=http://localhost:4444/wd/hub
 ```
+
+**Then update your .env file:**
+```env
+SELENIUM_REMOTE_URL=http://localhost:4444/wd/hub
+```
+
+**Option C: Local ChromeDriver (no Docker)**
+
+If you don't use Docker, `webdriver-manager` will automatically download and manage ChromeDriver. No additional setup required, but leave `SELENIUM_REMOTE_URL` empty in `.env`.
 
 ## 📖 Usage
 
@@ -146,40 +177,6 @@ Run the interactive search:
 python src/main.py
 ```
 
-## 🔧 Configuration
-
-### Search Query Generation
-
-Customize query generation in `ai_processing.py`:
-```python
-queries = generate_search_queries(
-    user_input="your question",
-    language="auto"  # Options: "auto", "cs", "en", "sk"
-)
-```
-
-### Web Scraping Options
-
-```python
-# Use only HTTP requests (faster)
-content = fetch_page_text(url, use_selenium=False)
-
-# Use Selenium for JavaScript-heavy sites (slower but more reliable)
-content = fetch_page_text(url, use_selenium=True)
-
-# Control number of results per query
-urls = search_google(queries, max=5, disregard_files=True)
-```
-
-### AI Response Language
-
-```python
-response = process_with_ai(
-    data=contents,
-    user_query="your question",
-    language="auto"  # Options: "auto", "cs", "en", "sk"
-)
-```
 ## Testing
 
 Run tests:
