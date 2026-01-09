@@ -27,12 +27,14 @@ def generate_search_queries(user_input, language="auto", max_input_length=500) -
         raise ValueError("[!] Missing AI API key in environment variables. Cannot generate search queries.")
 
     company = os.getenv("TARGET_DOMAIN")
+    url = os.getenv("AI_URL")
+    if not company or not url:
+        raise ValueError("[!] Missing TARGET DOMAIN or AI URL in environment variables. Cannot generate search queries.")
     
     # Sanitize and limit user input
     user_input = sanitize_user_input(user_input)
     user_input = user_input[:max_input_length]
 
-    url = "https://chetty-api.mateides.com/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
@@ -147,7 +149,6 @@ def generate_search_queries(user_input, language="auto", max_input_length=500) -
         raise
 
     result_content = response.json()["choices"][0]["message"]["content"]
-    
     parsed_result = SearchQueries(**json.loads(result_content))
     
     if not parsed_result.is_appropriate:
@@ -166,7 +167,6 @@ def format_sources(data_list: List[Dict]) -> str:
         # Sanitize scraped content
         content = sanitize_scraped_content(content)
         
-        
         formatted_sources.append(
             f"[Source {idx}]\n"
             f"URL: {source.get('url', 'Unknown')}\n"
@@ -182,15 +182,18 @@ def format_sources(data_list: List[Dict]) -> str:
 #process data with AI to generate structured response
 def process_with_ai(data, user_query="", language="auto", format="text"):
     api_key = os.getenv("AI_API_KEY")
-    company = os.getenv("TARGET_DOMAIN")
 
     if not api_key:
         raise ValueError("[!] Missing AI API key in environment variables. Cannot request AI processing.")
+    
+    company = os.getenv("TARGET_DOMAIN")
+    url = os.getenv("AI_URL")
+    if not company or not url:
+        raise ValueError("[!] Missing TARGET DOMAIN or AI URL in environment variables. Cannot request AI processing.")
 
     # Sanitize user query
     user_query = sanitize_user_input(user_query)
 
-    url = "https://chetty-api.mateides.com/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
@@ -308,42 +311,40 @@ def process_with_ai(data, user_query="", language="auto", format="text"):
         raise
     
     result_content = response.json()["choices"][0]["message"]["content"]
-    
     parsed_result = AIResponse(**json.loads(result_content))
     
     return parsed_result
 
-#sanitize user input - remove potentially harmful characters
+#sanitize user input
 def sanitize_user_input(text: str) -> str:
     if not text:
         return ""
     
-    # Remove control characters except newline, tab, carriage return
+    #remove control characters
     text = re.sub(r'[\x00-\x08\x0b-\x0c\x0e-\x1f\x7f-\x9f]', '', text)
     
-    # Remove common injection patterns
+    #remove common injection patterns
     text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.IGNORECASE | re.DOTALL)
     text = re.sub(r'javascript:', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'on\w+\s*=', '', text, flags=re.IGNORECASE)  # onclick, onerror, etc.
+    text = re.sub(r'on\w+\s*=', '', text, flags=re.IGNORECASE)
     
-    # Normalize whitespace
+    #normalize whitespace
     text = ' '.join(text.split())
     
     return text.strip()
 
-#sanitize scraped content - remove potentially harmful or useless content
+#sanitize scraped content
 def sanitize_scraped_content(text: str) -> str:
     if not text:
         return ""
     
-    # Remove control characters
     text = re.sub(r'[\x00-\x08\x0b-\x0c\x0e-\x1f\x7f-\x9f]', '', text)
     
-    # Remove excessive whitespace but preserve structure
-    text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)  # Max 2 consecutive newlines
-    text = re.sub(r' +', ' ', text)  # Multiple spaces to single space
+    #remove excessive whitespace
+    text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)
+    text = re.sub(r' +', ' ', text)
     
-    # Remove common noise patterns
+    #remove common noise patterns
     text = re.sub(r'(cookies?|gdpr|privacy policy)\s+(accept|consent|agree)', '', text, flags=re.IGNORECASE)
     
     return text.strip()

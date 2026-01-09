@@ -38,7 +38,7 @@ def search_google(queries, max=3, disregard_files=False):
                     continue
             
             urls.append(url)
-            if len(urls) == max:
+            if len(urls) >= max:
                 break
         
         all_urls.extend(urls)
@@ -264,6 +264,7 @@ def clean_html(element) -> str:
         if tag.name not in allowed_tags:
             tag.unwrap()  #keep content but remove tag
     
+    #remove all attributes except href for links
     for tag in clean.find_all():
         if tag.name == 'a' and tag.get('href'):
             attrs = {'href': tag['href']}

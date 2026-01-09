@@ -1,4 +1,4 @@
-# Stop Selenium Docker Container Script
+#Stop Selenium Docker Container Script
 
 $CONTAINER_NAME = "selenium-chrome"
 

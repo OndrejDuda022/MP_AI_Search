@@ -12,7 +12,7 @@ from src.ai_processing import process_with_ai, generate_search_queries
 
 #main function
 def main():
-    # Check Selenium container if remote URL is configured
+    # Check Selenium container
     if not ensure_selenium_container():
         if os.getenv("CONTAIN_SELENIUM", "False").lower() != "true":
             print("[*] Proceeding without Selenium docker setup. Continuing with local ChromeDriver...")
@@ -34,12 +34,12 @@ def main():
         print("[!] Query too long (max 500 characters). Process terminated.")
         return
 
-    #generate search queries using AI (already sanitizes internally)
+    #generate search queries using AI
     search_queries = generate_search_queries(query)
     if not search_queries:
         print("[!] The input query was deemed inappropriate. Process terminated.")
         return
-    print("[*] Generated search queries:", search_queries)
+    print("[*] Generated search queries:", search_queries) #TO BE REMOVED
 
     #search google
     urls = search_google(search_queries, disregard_files=True)
@@ -49,13 +49,13 @@ def main():
     
     #remove duplicate URLs
     urls = list(dict.fromkeys(urls))
-    print(f"[*] Fetched URLs: {len(urls)}")
+    print(f"[*] Fetched URLs: {len(urls)}") #TO BE REMOVED
     for url in urls:
         print(f" - {url}")
 
     #fetch page contents
     use_selenium = os.getenv("FORCE_SELENIUM", "False").lower() == "true"
-    extract_mode = os.getenv("EXTRACT_MODE", "text")
+    extract_mode = os.getenv("EXTRACT_MODE", "text").lower()
     contents = []
     for url in urls:
         content = fetch_page_text(url, use_selenium, extract_mode)
@@ -128,8 +128,7 @@ def ensure_selenium_container():
             # Use PowerShell script on Windows
             script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src/scripts/start_selenium.ps1")
             if os.path.exists(script_path):
-                result = subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", script_path], 
-                                      capture_output=True, text=True, timeout=30)
+                result = subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", script_path], capture_output=True, text=True, timeout=30)
                 if result.returncode == 0:
                     print("[+] Selenium container started successfully")
                     return True

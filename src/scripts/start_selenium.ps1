@@ -1,5 +1,4 @@
-# Selenium Docker Container Startup Script
-# Automatically checks and starts Selenium container if needed
+#Selenium Docker Container Startup Script
 
 $CONTAINER_NAME = "selenium-chrome"
 $IMAGE_NAME = "selenium/standalone-chrome:latest"
@@ -7,7 +6,7 @@ $PORT = "4444"
 
 Write-Host "[*] Checking Selenium Docker container status..." -ForegroundColor Cyan
 
-# Check if Docker is running
+#check if docker is running
 try {
     docker ps | Out-Null
     if ($LASTEXITCODE -ne 0) {
@@ -19,7 +18,7 @@ try {
     exit 1
 }
 
-# Check if container is already running
+#check if container is already running
 $running = docker ps --filter "name=$CONTAINER_NAME" --format "{{.Names}}"
 if ($running -eq $CONTAINER_NAME) {
     Write-Host "[+] Selenium container is already running." -ForegroundColor Green
@@ -27,7 +26,7 @@ if ($running -eq $CONTAINER_NAME) {
     exit 0
 }
 
-# Check if container exists but is stopped
+#check if container exists but is stopped
 $stopped = docker ps -a --filter "name=$CONTAINER_NAME" --format "{{.Names}}"
 if ($stopped -eq $CONTAINER_NAME) {
     Write-Host "[*] Starting existing Selenium container..." -ForegroundColor Yellow
@@ -42,7 +41,7 @@ if ($stopped -eq $CONTAINER_NAME) {
     }
 }
 
-# Check if image exists
+#check if image exists
 $imageExists = docker images --filter "reference=$IMAGE_NAME" --format "{{.Repository}}"
 if (-not $imageExists) {
     Write-Host "[*] Pulling Selenium image (this may take a few minutes)..." -ForegroundColor Yellow
@@ -53,7 +52,7 @@ if (-not $imageExists) {
     }
 }
 
-# Create and start new container
+#create and start new container
 Write-Host "[*] Creating new Selenium container..." -ForegroundColor Yellow
 docker run `
     --name $CONTAINER_NAME `
