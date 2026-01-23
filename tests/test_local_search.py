@@ -8,7 +8,7 @@ sys.path.insert(0, os.getenv("PYTHONPATH"))
 from src.local_db import search_local_db, get_db_stats
 
 #test query
-query = "kontakt škola adresa"
+query = "přehled"
 
 print(f"Dotaz: {query}\n")
 

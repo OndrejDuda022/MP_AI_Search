@@ -33,8 +33,12 @@ def main():
 
     #load configuration from .env
     use_local_db = os.getenv("USE_LOCAL_DB", "True").lower() == "true"
-    search_mode = os.getenv("SEARCH_MODE", "hybrid").lower()  # hybrid/local/web
-    internal_mode = os.getenv("INTERNAL_MODE", "False").lower() == "true"
+    if use_local_db:
+        print("[*] Local database search is enabled")
+        search_mode = os.getenv("SEARCH_MODE", "hybrid").lower()  # hybrid/local/web
+        internal_mode = os.getenv("INTERNAL_MODE", "True").lower() == "true"
+        minimal_sources = int(os.getenv("MINIMAL_SOURCES", "3"))
+        min_relevance = float(os.getenv("MIN_RELEVANCE", "0.6"))
     
     contents = []
     
@@ -49,7 +53,7 @@ def main():
         if stats.get('count', 0) > 0:
             local_results = search_local_db(search_queries, n_results=5)
             
-            if local_results and is_relevant(local_results):
+            if local_results and is_relevant(local_results, min_relevance):
                 print(f"[*] Found {len(local_results)} relevant local results")
                 contents.extend(local_results)
                 
@@ -57,7 +61,7 @@ def main():
                 if search_mode == "local":
                     print("[*] Local-only mode, skipping web search")
                 #if hybrid and enough good results, skip web
-                elif len(local_results) >= 3:
+                elif len(local_results) >= minimal_sources:
                     print("[*] Sufficient local results, skipping web search")
                 else:
                     print("[*] Local results found, but searching web for more context...")
@@ -67,7 +71,7 @@ def main():
             print("[!] Local database is empty")
     
     #web search
-    if search_mode in ["hybrid", "web"] and len(contents) < 3:
+    if search_mode in ["hybrid", "web"] and len(contents) < minimal_sources:
         print("[*] Searching web...")
         
         #check Selenium container (only when needed for web search)

@@ -59,7 +59,7 @@ def search_local_db(queries: List[str], n_results: int = 5) -> List[Dict]:
         print(f"[!] Error searching local database: {e}")
         return []
 
-def is_relevant(results: List[Dict], min_relevance: float = 0.3) -> bool:
+def is_relevant(results: List[Dict], min_relevance: float) -> bool:
     if not results:
         return False
     
