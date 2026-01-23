@@ -31,7 +31,7 @@ def generate_search_queries(user_input, language="auto", max_input_length=500) -
     if not company or not url:
         raise ValueError("[!] Missing TARGET DOMAIN or AI URL in environment variables. Cannot generate search queries.")
     
-    # Sanitize and limit user input
+    #sanitize and limit user input
     user_input = sanitize_user_input(user_input)
     user_input = user_input[:max_input_length]
 
@@ -191,7 +191,7 @@ def process_with_ai(data, user_query="", language="auto", format="text"):
     if not company or not url:
         raise ValueError("[!] Missing TARGET DOMAIN or AI URL in environment variables. Cannot request AI processing.")
 
-    # Sanitize user query
+    #sanitize user query
     user_query = sanitize_user_input(user_query)
 
     headers = {
