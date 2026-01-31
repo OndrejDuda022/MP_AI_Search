@@ -11,8 +11,18 @@ An intelligent search system that combines Google Custom Search API with advance
 
 ## Features
 
+### **Local Vector Database (ChromaDB)**
+- **Multilingual semantic search** using `paraphrase-multilingual-mpnet-base-v2` embedding model
+- **Optimized for Czech language** - High-quality embeddings for 50+ languages
+- **Smart query generation** - AI transforms questions into semantic keywords for better retrieval
+- **Relevance filtering** - Configurable distance threshold to filter irrelevant results
+- **Hybrid search mode** - Combines local knowledge base with web search
+- **Fast retrieval** - Vector similarity search with persistent storage
+
 ### **AI-Powered Query Generation**
-- Transforms natural language questions into optimized Google search queries
+- **Dual-mode query generation:**
+  - Local DB queries: Semantic keywords optimized for vector search
+  - Web queries: Domain-specific search terms optimized for Google
 - Generates 2-4 diverse queries targeting different information angles
 - Multi-language support (Czech, English, Slovak, auto-detection)
 - Input validation to filter inappropriate or harmful queries
@@ -41,13 +51,21 @@ An intelligent search system that combines Google Custom Search API with advance
 ```
 User Query
     ↓
-[1] AI Query Generator
-    ↓ (2-4 optimized search queries)
-[2] Google Custom Search API
+[1] AI Query Generator (Local DB optimized)
+    ↓ (semantic keywords)
+[2] Local Vector Database (ChromaDB)
+    ↓ (relevant documents with distance scores)
+[3] Relevance Filter
+    ↓
+    ├─ Sufficient results? → [5]
+    └─ Need more context ↓
+[4] AI Query Generator (Web optimized)
+    ↓ (domain-specific search queries)
+[5] Google Custom Search API
     ↓ (relevant URLs)
-[3] Web Content Scraper
+[6] Web Content Scraper
     ↓ (extracted text + metadata)
-[4] AI Response Generator
+[7] AI Response Generator
     ↓
 Structured Answer with Citations
 ```
@@ -87,6 +105,8 @@ This installs all dependencies from [setup.py](setup.py) including:
 - `selenium` - Web automation
 - `webdriver-manager` - ChromeDriver management
 - `pdfplumber` - PDF text extraction
+- `chromadb` - Vector database for semantic search
+- `sentence-transformers` - Multilingual embedding models
 
 3. **Configure environment variables:**
 
@@ -105,6 +125,13 @@ TARGET_DOMAIN=your-company.com
 # Content Extraction Mode (optional - default: text)
 # Options: 'text' (plain text) or 'html' (structured HTML)
 EXTRACT_MODE=text
+
+# Local Database Configuration (optional)
+USE_LOCAL_DB=True
+SEARCH_MODE=hybrid  # Options: 'local', 'web', 'hybrid'
+MINIMAL_SOURCES=3
+MAXIMAL_SOURCES=5
+MIN_RELEVANCE=0.7  # Distance threshold (lower = more similar)
 
 # Selenium Remote URL (optional)
 # If set, Selenium will use RemoteWebDriver (e.g., Docker container)
@@ -171,9 +198,64 @@ python src/main.py
 
 Run tests:
 ```bash
+# Test local database search
+python tests/test_local_search.py
+
+# Load documents into local database
+python tests/document_loader.py
+
 # Test AI processing
 python tests/test_ai_processing.py
 
 # Test Google search and scraping
 python tests/test_google_search.py
 ```
+
+## Local Database Setup
+
+### Initial Setup
+
+1. **Load documents into the database:**
+```bash
+python tests/document_loader.py
+```
+
+This populates the vector database with sample documents using the multilingual embedding model.
+
+2. **Test the search:**
+```bash
+python tests/test_local_search.py
+```
+
+### Understanding the Embedding Model
+
+The system uses **`paraphrase-multilingual-mpnet-base-v2`**:
+- **278M parameters** - High-quality embeddings
+- **50+ languages** - Excellent Czech language support
+- **First run**: Downloads ~470MB model (cached for future use)
+- **Distance metric**: Cosine distance (lower = more similar)
+  - 0.0 - 0.3: Highly relevant
+  - 0.3 - 0.7: Moderately relevant
+  - 0.7+: Less relevant
+
+### Search Modes
+
+**`local`** - Search only local database
+```env
+SEARCH_MODE=local
+```
+Fast, uses only pre-indexed knowledge.
+
+**`web`** - Search only the web
+```env
+SEARCH_MODE=web
+```
+Always uses Google search, ignores local database.
+
+**`hybrid`** (recommended) - Smart combination
+```env
+SEARCH_MODE=hybrid
+```
+1. Searches local database first
+2. If enough relevant results found → use them
+3. Otherwise → supplement with web search
