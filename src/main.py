@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 sys.path.insert(0, os.getenv("PYTHONPATH"))
 from page_search import search_google, fetch_page_text
-from src.ai_processing import process_with_ai, generate_search_queries
+from src.ai_processing import process_with_ai, generate_search_queries, generate_local_db_queries
 from src.local_db import search_local_db, filter_relevant, get_db_stats
 
 #main function
@@ -24,13 +24,6 @@ def main():
         print(f"[!] Query too long (max {os.getenv('MAX_USER_QUERY_LENGTH', 300)} characters). Process terminated.")
         return
 
-    #generate search queries using AI
-    search_queries = generate_search_queries(query, language=os.getenv("LANGUAGE", "auto"), max_input_length=int(os.getenv("MAX_USER_QUERY_LENGTH", 300)))
-    if not search_queries:
-        print("[!] The input query was deemed inappropriate. Process terminated.")
-        return
-    print("[*] Generated search queries:", search_queries)
-
     #load configuration from .env
     #Default settings:
         #Use local DB: True
@@ -40,12 +33,10 @@ def main():
         #Minimal relevance: 0.6
     use_local_db = os.getenv("USE_LOCAL_DB", "True").lower() == "true"
     search_mode = os.getenv("SEARCH_MODE", "hybrid").lower()  # hybrid/local/web
-    if use_local_db:
-        print("[*] Local database search is enabled")
-        internal_mode = os.getenv("INTERNAL_MODE", "True").lower() == "true"
-        minimal_sources = int(os.getenv("MINIMAL_SOURCES", "3"))
-        maximal_sources = int(os.getenv("MAXIMAL_SOURCES", "5"))
-        min_relevance = float(os.getenv("MIN_RELEVANCE", "0.6"))
+    internal_mode = os.getenv("INTERNAL_MODE", "True").lower() == "true"
+    minimal_sources = int(os.getenv("MINIMAL_SOURCES", "3"))
+    maximal_sources = int(os.getenv("MAXIMAL_SOURCES", "5"))
+    min_relevance = float(os.getenv("MIN_RELEVANCE", "0.6"))
     
     contents = []
     
@@ -58,33 +49,46 @@ def main():
         print(f"[*] Local database: {stats.get('count', 0)} documents")
         
         if stats.get('count', 0) > 0:
-            local_results = search_local_db(search_queries, n_results=maximal_sources)
-            
-            #filter out irrelevant results
-            relevant_results = filter_relevant(local_results, min_relevance)
-            
-            if relevant_results:
-                print(f"[*] Found {len(relevant_results)} relevant local results (filtered from {len(local_results)} total)")
-                contents.extend(relevant_results)
-                
-                #if local-only mode, skip web
-                if search_mode == "local":
-                    print("[*] Local-only mode, skipping web search")
-                #if hybrid and enough good results, skip web
-                elif len(relevant_results) >= minimal_sources:
-                    print("[*] Sufficient local results, skipping web search")
-                else:
-                    print("[*] Local results found, but searching web for more context...")
+            #generate queries optimized for vector DB (semantic search)
+            local_queries = generate_local_db_queries(query, language=os.getenv("LANGUAGE", "auto"))
+            if not local_queries:
+                print("[!] Could not generate local DB queries")
             else:
-                print(f"[!] No relevant local results found (0/{len(local_results)} passed threshold {min_relevance})")
+                print(f"[*] Local DB queries: {local_queries}")
+                local_results = search_local_db(local_queries, n_results=maximal_sources)
+                
+                #filter out irrelevant results
+                relevant_results = filter_relevant(local_results, min_relevance)
+                
+                if relevant_results:
+                    print(f"[*] Found {len(relevant_results)} relevant local results (filtered from {len(local_results)} total)")
+                    contents.extend(relevant_results)
+                    
+                    #if local-only mode, skip web
+                    if search_mode == "local":
+                        print("[*] Local-only mode, skipping web search")
+                    #if hybrid and enough good results, skip web
+                    elif len(relevant_results) >= minimal_sources:
+                        print("[*] Sufficient local results, skipping web search")
+                    else:
+                        print("[*] Local results found, but searching web for more context...")
+                else:
+                    print(f"[!] No relevant local results found (0/{len(local_results)} passed threshold {min_relevance})")
         else:
             print("[!] Local database is empty")
     
     #web search
-    if search_mode == "hybrid" and len(contents) < minimal_sources or search_mode == "web":
-        print("[*] Searching web...")
+    if search_mode in ["hybrid", "web"] and len(contents) < minimal_sources:
+        print("[*] Preparing web search...")
         
-        #check Selenium container (only when needed for web search)
+        #generate search queries for Google
+        search_queries = generate_search_queries(query, language=os.getenv("LANGUAGE", "auto"), max_input_length=int(os.getenv("MAX_USER_QUERY_LENGTH", 300)))
+        if not search_queries:
+            print("[!] The input query was deemed inappropriate. Process terminated.")
+            return
+        print(f"[*] Web search queries: {search_queries}")
+        
+        #check Selenium container
         selenium_required = os.getenv("CONTAIN_SELENIUM", "False").lower() == "true"
         allow_fallback = os.getenv("ALLOW_LOCAL_SELENIUM", "False").lower() == "true"
         

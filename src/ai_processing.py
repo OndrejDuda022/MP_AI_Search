@@ -159,6 +159,147 @@ def generate_search_queries(user_input, language="auto", max_input_length=500) -
     
     return parsed_result.queries
 
+#generate queries optimized for local vector database search
+#parameters: user_input (str) - user question, language (str) - language preference, max_input_length (int) - max input length
+#returns: List[str] - list of keyword-based queries for semantic search
+def generate_local_db_queries(user_input, language="auto", max_input_length=500) -> List[str]:
+    api_key = os.getenv("AI_API_KEY")
+    if not api_key:
+        raise ValueError("[!] Missing AI API key in environment variables. Cannot generate search queries.")
+
+    url = os.getenv("AI_URL")
+    if not url:
+        raise ValueError("[!] Missing AI URL in environment variables. Cannot generate search queries.")
+    
+    #sanitize and limit user input
+    user_input = sanitize_user_input(user_input)
+    user_input = user_input[:max_input_length]
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    lang_map = {
+        "cs": "Generate all queries in Czech language.",
+        "en": "Generate all queries in English language.",
+        "sk": "Generate all queries in Slovak language.",
+        "auto": "Generate queries in the same language as the user input (Czech if user writes in Czech, English if English, etc.)."
+    }
+    lang_instruction = lang_map.get(language, lang_map["auto"])
+    
+    payload = {
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    f"You are an expert at extracting search terms for vector database semantic search.\n\n"
+                    
+                    f"## YOUR TASK:\n"
+                    f"Transform user questions into keyword-rich queries that match document content.\n\n"
+                    
+                    f"## VECTOR DATABASE CHARACTERISTICS:\n"
+                    f"- Documents are SHORT (1-3 sentences) factual chunks\n"
+                    f"- Content uses natural descriptive language\n"
+                    f"- No company names in documents (generic content)\n"
+                    f"- Semantic search finds similar MEANING, not exact keywords\n\n"
+                    
+                    f"## QUERY GENERATION RULES:\n"
+                    f"1. Extract KEY TOPICS and CONCEPTS from the question\n"
+                    f"2. Generate 2-4 different semantic angles\n"
+                    f"3. Use NATURAL LANGUAGE that appears in informational text\n"
+                    f"4. DO NOT include company/domain names\n"
+                    f"5. Think: 'What words would be IN the answer document?'\n"
+                    f"6. {lang_instruction}\n\n"
+                    
+                    f"## EFFECTIVE PATTERNS:\n\n"
+                    
+                    f"### Example 1:\n"
+                    f"User: 'Jaké studijní obory nabízíte?'\n"
+                    f"→ ['studijní obory střední škola',\n"
+                    f"    'maturitní obory technické vzdělávání',\n"
+                    f"    'nabídka oborů studium']\n\n"
+                    
+                    f"### Example 2:\n"
+                    f"User: 'How do I contact you?'\n"
+                    f"→ ['contact information email phone',\n"
+                    f"    'communication secretariat office',\n"
+                    f"    'how to reach contact details']\n\n"
+                    
+                    f"### Example 3:\n"
+                    f"User: 'Kdy jsou přijímací zkoušky?'\n"
+                    f"→ ['přijímací řízení termíny',\n"
+                    f"    'přihlášky kritéria zkouška',\n"
+                    f"    'školní rok přijetí studium']\n\n"
+                    
+                    f"### Example 4:\n"
+                    f"User: 'Do you offer internships abroad?'\n"
+                    f"→ ['internships abroad international',\n"
+                    f"    'Erasmus study abroad opportunities',\n"
+                    f"    'foreign work experience students']\n\n"
+                    
+                    f"## BAD vs GOOD:\n"
+                    f"BAD: 'pslib.cz contact hours' (company name, web search style)\n"
+                    f"GOOD: 'opening hours contact office' (descriptive terms)\n\n"
+                    
+                    f"BAD: 'liberec school IT program' (location-specific)\n"
+                    f"GOOD: 'information technology study program' (generic, descriptive)\n\n"
+                    
+                    f"## APPROPRIATENESS:\n"
+                    f"Same rules as web search - mark inappropriate if asking for private data, harmful content, etc."
+                )
+            },
+            {
+                "role": "user",
+                "content": user_input
+            }
+        ],
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "search_queries",
+                "strict": True,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "queries": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of keyword-based semantic search queries"
+                        },
+                        "is_appropriate": {
+                            "type": "boolean",
+                            "description": "Whether the input is appropriate for searching"
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "Reason if inappropriate, empty otherwise"
+                        }
+                    },
+                    "required": ["queries", "is_appropriate", "reason"],
+                    "additionalProperties": False
+                }
+            }
+        }
+    }
+
+    print("[*] Generating local DB queries...")
+    response = requests.post(url, headers=headers, json=payload)
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as e:
+        print(f"[!] AI API request failed: {e}")
+        print(f"Response content: {response.text}")
+        raise
+
+    result_content = response.json()["choices"][0]["message"]["content"]
+    parsed_result = SearchQueries(**json.loads(result_content))
+    
+    if not parsed_result.is_appropriate:
+        print(f"[!] Inappropriate input detected: {parsed_result.reason}")
+        return None
+    return parsed_result.queries
+
 #process data with AI to generate structured response
 #parameters: data (List[Dict]) - list of source data dictionaries, user_query (str) - user question, language (str) - desired language
 #returns: AIResponse - structured AI response

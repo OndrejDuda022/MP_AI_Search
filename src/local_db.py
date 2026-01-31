@@ -1,5 +1,6 @@
 import os
 import chromadb
+from chromadb.utils import embedding_functions
 from typing import List, Dict, Optional
 
 _client = None
@@ -22,7 +23,19 @@ def get_collection(name: str = "knowledge_base"):
     global _collection
     if _collection is None:
         client = get_db_client()
-        _collection = client.get_or_create_collection(name=name)
+        
+        #model: paraphrase-multilingual-mpnet-base-v2 (278M params, supports 50+ languages)
+        multilingual_ef = embedding_functions.SentenceTransformerEmbeddingFunction(
+            model_name="paraphrase-multilingual-mpnet-base-v2"
+        )
+        
+        _collection = client.get_or_create_collection(
+            name=name,
+            embedding_function=multilingual_ef,
+            metadata={"description": "Knowledge base with multilingual embeddings"}
+        )
+        
+        print(f"[*] Using embedding model: paraphrase-multilingual-mpnet-base-v2")
     return _collection
 
 #search the local database
