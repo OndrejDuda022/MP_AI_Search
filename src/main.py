@@ -9,7 +9,7 @@ load_dotenv()
 sys.path.insert(0, os.getenv("PYTHONPATH"))
 from page_search import search_google, fetch_page_text
 from src.ai_processing import process_with_ai, generate_search_queries
-from src.local_db import search_local_db, is_relevant, get_db_stats
+from src.local_db import search_local_db, filter_relevant, get_db_stats
 
 #main function
 def main():
@@ -20,24 +20,31 @@ def main():
         print("[!] Empty query. Process terminated.")
         return
     
-    if len(query) > 500:
-        print("[!] Query too long (max 500 characters). Process terminated.")
+    if len(query) > int(os.getenv("MAX_USER_QUERY_LENGTH", 300)):
+        print(f"[!] Query too long (max {os.getenv('MAX_USER_QUERY_LENGTH', 300)} characters). Process terminated.")
         return
 
     #generate search queries using AI
-    search_queries = generate_search_queries(query)
+    search_queries = generate_search_queries(query, language=os.getenv("LANGUAGE", "auto"), max_input_length=int(os.getenv("MAX_USER_QUERY_LENGTH", 300)))
     if not search_queries:
         print("[!] The input query was deemed inappropriate. Process terminated.")
         return
     print("[*] Generated search queries:", search_queries)
 
     #load configuration from .env
+    #Default settings:
+        #Use local DB: True
+        #Search mode: hybrid
+        #Internal mode: True - for safety
+        #Minimal sources: 3
+        #Minimal relevance: 0.6
     use_local_db = os.getenv("USE_LOCAL_DB", "True").lower() == "true"
+    search_mode = os.getenv("SEARCH_MODE", "hybrid").lower()  # hybrid/local/web
     if use_local_db:
         print("[*] Local database search is enabled")
-        search_mode = os.getenv("SEARCH_MODE", "hybrid").lower()  # hybrid/local/web
         internal_mode = os.getenv("INTERNAL_MODE", "True").lower() == "true"
         minimal_sources = int(os.getenv("MINIMAL_SOURCES", "3"))
+        maximal_sources = int(os.getenv("MAXIMAL_SOURCES", "5"))
         min_relevance = float(os.getenv("MIN_RELEVANCE", "0.6"))
     
     contents = []
@@ -51,62 +58,73 @@ def main():
         print(f"[*] Local database: {stats.get('count', 0)} documents")
         
         if stats.get('count', 0) > 0:
-            local_results = search_local_db(search_queries, n_results=5)
+            local_results = search_local_db(search_queries, n_results=maximal_sources)
             
-            if local_results and is_relevant(local_results, min_relevance):
-                print(f"[*] Found {len(local_results)} relevant local results")
-                contents.extend(local_results)
+            #filter out irrelevant results
+            relevant_results = filter_relevant(local_results, min_relevance)
+            
+            if relevant_results:
+                print(f"[*] Found {len(relevant_results)} relevant local results (filtered from {len(local_results)} total)")
+                contents.extend(relevant_results)
                 
                 #if local-only mode, skip web
                 if search_mode == "local":
                     print("[*] Local-only mode, skipping web search")
                 #if hybrid and enough good results, skip web
-                elif len(local_results) >= minimal_sources:
+                elif len(relevant_results) >= minimal_sources:
                     print("[*] Sufficient local results, skipping web search")
                 else:
                     print("[*] Local results found, but searching web for more context...")
             else:
-                print("[!] No relevant local results found")
+                print(f"[!] No relevant local results found (0/{len(local_results)} passed threshold {min_relevance})")
         else:
             print("[!] Local database is empty")
     
     #web search
-    if search_mode in ["hybrid", "web"] and len(contents) < minimal_sources:
+    if search_mode == "hybrid" and len(contents) < minimal_sources or search_mode == "web":
         print("[*] Searching web...")
         
         #check Selenium container (only when needed for web search)
-        if not ensure_selenium_container():
-            if os.getenv("CONTAIN_SELENIUM", "False").lower() != "true":
-                print("[*] Proceeding without Selenium docker setup. Continuing with local ChromeDriver...")
-            else:
-                if os.getenv("ALLOW_LOCAL_SELENIUM", "False").lower() == "true":
-                    print("[!] Selenium container setup failed. Continuing with local ChromeDriver...")
-                else:
-                    print("[!] Selenium container setup failed and local Selenium is not allowed.")
-                    if len(contents) == 0:
-                        print("[!] Process terminated.")
-                        return
-                    else:
-                        print("[*] Continuing with local results only.")
+        selenium_required = os.getenv("CONTAIN_SELENIUM", "False").lower() == "true"
+        allow_fallback = os.getenv("ALLOW_LOCAL_SELENIUM", "False").lower() == "true"
         
-        urls = search_google(search_queries, disregard_files=True)
-        if not urls:
-            if len(contents) == 0:
-                print("[!] No results found (neither local nor web). Process terminated.")
-                return
+        can_proceed = True
+        if selenium_required:
+            if ensure_selenium_container():
+                print("[+] Selenium container ready")
+            elif allow_fallback:
+                print("[*] Selenium container failed. Falling back to local ChromeDriver...")
+            else:
+                print("[!] Selenium container failed and fallback is not allowed.")
+                if len(contents) == 0:
+                    print("[!] No local results available. Process terminated.")
+                    return
+                print("[*] Continuing with local results only.")
+                can_proceed = False
+        
+        if not can_proceed:
+            #skip web search, proceed with local results only
+            pass
         else:
-            #remove duplicate URLs
-            urls = list(dict.fromkeys(urls))
-            print(f"[*] Fetched URLs: {len(urls)}")
-            
-            #fetch page contents
-            use_selenium = os.getenv("FORCE_SELENIUM", "False").lower() == "true"
-            extract_mode = os.getenv("EXTRACT_MODE", "text").lower()
-            
-            for url in urls:
-                content = fetch_page_text(url, use_selenium, extract_mode)
-                if content:
-                    contents.append(content)
+            max_results = int(os.getenv("MAXIMAL_RESULTS", "3"))
+            urls = search_google(search_queries, max=max_results, disregard_files=os.getenv("SKIP_FILES", "True").lower() == "true")
+            if not urls:
+                if len(contents) == 0:
+                    print("[!] No results found (neither local nor web). Process terminated.")
+                    return
+            else:
+                #remove duplicate URLs
+                urls = list(dict.fromkeys(urls))
+                print(f"[*] Fetched URLs: {len(urls)}")
+                
+                #fetch page contents
+                use_selenium = os.getenv("FORCE_SELENIUM", "False").lower() == "true"
+                extract_mode = os.getenv("EXTRACT_MODE", "text").lower()
+                
+                for url in urls:
+                    content = fetch_page_text(url, use_selenium, extract_mode)
+                    if content:
+                        contents.append(content)
     
     #check if we have any results
     if not contents:
@@ -119,13 +137,13 @@ def main():
         print(f"  {i}. [{source.get('type', 'N/A')}] {source.get('title', 'N/A')}")
     
     #process results
-    if internal_mode:
+    if search_mode in ["local", "hybrid"] and internal_mode:
         #internal mode - display raw results without AI processing
         print("\n[*] Internal mode - displaying raw results (no AI processing)")
         display_raw_results(contents, query)
     else:
         #normal mode - AI processing
-        response = process_with_ai(contents, query)
+        response = process_with_ai(contents, query, language=os.getenv("LANGUAGE", "auto"))
         pretty_output(response)
 
 #function to pretty print AI response
@@ -172,17 +190,13 @@ def display_raw_results(contents, query):
 
 #check and start Selenium container if needed
 def ensure_selenium_container():
-    contain_selenium = os.getenv("CONTAIN_SELENIUM")
-    if not contain_selenium.lower() == "true":
-        return False
-    
     print("[*] Checking Selenium container...")
     
     try:
         #check if Docker is available
         result = subprocess.run(["docker", "ps"], capture_output=True, text=True, timeout=5)
         if result.returncode != 0:
-            print("[!] Docker is not running. Please start Docker Desktop or remove SELENIUM_REMOTE_URL from .env")
+            print("[!] Docker is not running. Please start Docker Desktop.")
             return False
         
         #check if selenium-chrome container is running
@@ -201,6 +215,7 @@ def ensure_selenium_container():
             #use PowerShell script on Windows
             script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src/scripts/start_selenium.ps1")
             if os.path.exists(script_path):
+                print(f"[*] Executing script: {script_path}")
                 result = subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", script_path], capture_output=True, text=True, timeout=30)
                 if result.returncode == 0:
                     print("[+] Selenium container started successfully")

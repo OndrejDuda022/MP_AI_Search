@@ -21,6 +21,8 @@ class AIResponse(BaseModel):
     confidence: str
 
 #generate search queries based on user input
+#parameters: user_input (str) - raw user question, language (str) - desired language for queries, max_input_length (int) - max length of user input
+#returns: List[str] - list of generated search queries
 def generate_search_queries(user_input, language="auto", max_input_length=500) -> List[str]:
     api_key = os.getenv("AI_API_KEY")
     if not api_key:
@@ -157,30 +159,10 @@ def generate_search_queries(user_input, language="auto", max_input_length=500) -
     
     return parsed_result.queries
 
-#format structured data for AI consumption
-def format_sources(data_list: List[Dict]) -> str:
-    formatted_sources = []
-    
-    for idx, source in enumerate(data_list, 1):
-        content = source.get('content', '')
-        
-        # Sanitize scraped content
-        content = sanitize_scraped_content(content)
-        
-        formatted_sources.append(
-            f"[Source {idx}]\n"
-            f"URL: {source.get('url', 'Unknown')}\n"
-            f"Title: {source.get('title', 'Untitled')}\n"
-            f"Type: {source.get('type', 'unknown')}\n"
-            f"Content Length: {source.get('length', 0)} characters\n"
-            f"Content:\n{content}\n"
-            f"{'=' * 80}\n"
-        )
-    
-    return "\n".join(formatted_sources)
-
 #process data with AI to generate structured response
-def process_with_ai(data, user_query="", language="auto", format="text"):
+#parameters: data (List[Dict]) - list of source data dictionaries, user_query (str) - user question, language (str) - desired language
+#returns: AIResponse - structured AI response
+def process_with_ai(data, user_query="", language="auto"):
     api_key = os.getenv("AI_API_KEY")
 
     if not api_key:
@@ -210,19 +192,6 @@ def process_with_ai(data, user_query="", language="auto", format="text"):
     
     formatted_data = format_sources(data)
     
-    #detect if we're working with HTML structured content
-    if format == "html":
-        html_instruction = {
-            "\n\n## CONTENT FORMAT:\n"
-            "The source content is provided as cleaned HTML with semantic structure preserved.\n"
-            "- Use HTML tags (h1-h6, ul, ol, table, etc.) to understand information hierarchy\n"
-            "- Pay attention to headings for main topics and structure\n"
-            "- Tables contain structured data - extract them carefully\n"
-            "- Links (<a>) show relationships between topics\n"
-        }
-    else:
-        html_instruction = ""
-    
     payload = {
         "messages": [
             {
@@ -239,7 +208,6 @@ def process_with_ai(data, user_query="", language="auto", format="text"):
                     f"3. **Be concise** - provide direct answers, avoid unnecessary elaboration\n"
                     f"4. **Be honest** - if sources don't contain the answer, clearly state this\n"
                     f"5. {lang_instruction}\n"
-                    f"{html_instruction}\n"
                     
                     f"## KEY POINTS EXTRACTION:\n"
                     f"- Extract 3-5 key points (fewer if information is limited, more only if critical)\n"
@@ -315,7 +283,33 @@ def process_with_ai(data, user_query="", language="auto", format="text"):
     
     return parsed_result
 
+#format structured data for AI consumption
+#parameters: data_list (List[Dict]) - list of source data dictionaries
+#returns: str - formatted string representation of sources
+def format_sources(data_list: List[Dict]) -> str:
+    formatted_sources = []
+    
+    for idx, source in enumerate(data_list, 1):
+        content = source.get('content', '')
+        
+        # Sanitize scraped content
+        content = sanitize_scraped_content(content)
+        
+        formatted_sources.append(
+            f"[Source {idx}]\n"
+            f"URL: {source.get('url', 'Unknown')}\n"
+            f"Title: {source.get('title', 'Untitled')}\n"
+            f"Type: {source.get('type', 'unknown')}\n"
+            f"Content Length: {source.get('length', 0)} characters\n"
+            f"Content:\n{content}\n"
+            f"{'=' * 80}\n"
+        )
+    
+    return "\n".join(formatted_sources)
+
 #sanitize user input
+#parameters: text (str) - raw user input
+#returns: str - sanitized user input
 def sanitize_user_input(text: str) -> str:
     if not text:
         return ""
@@ -334,6 +328,8 @@ def sanitize_user_input(text: str) -> str:
     return text.strip()
 
 #sanitize scraped content
+#parameters: text (str) - raw scraped content
+#returns: str - sanitized content
 def sanitize_scraped_content(text: str) -> str:
     if not text:
         return ""

@@ -166,6 +166,6 @@ add_document(
     doc_id="about_zrizovatel"
 )
 
-# Print database stats
+#print database stats
 stats = get_db_stats()
 print(f"[*] Local database populated with {stats.get('count', 0)} documents.")

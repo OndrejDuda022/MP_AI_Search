@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 sys.path.insert(0, os.getenv("PYTHONPATH"))
 
-from page_search import search_google, fetch_page_text
+from src.page_search import search_google, fetch_page_text
 
 #test google search
 def test_google_search():

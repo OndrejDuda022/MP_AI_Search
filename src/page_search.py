@@ -12,6 +12,8 @@ import pdfplumber
 load_dotenv()
 
 #function to search google using Custom Search API
+#parameters: queries (List[str]) - list of search queries, max (int) - max results per query, disregard_files (bool) - whether to skip file links
+#returns: List[str] - list of URLs
 def search_google(queries, max=3, disregard_files=False):
     api_key = os.getenv("GOOGLE_API_KEY")
     search_engine_id = os.getenv("SEARCH_ENGINE_ID")
@@ -45,50 +47,61 @@ def search_google(queries, max=3, disregard_files=False):
 
     return all_urls
 
-def is_pdf_content(response: requests.Response) -> bool:
-    content_type = response.headers.get('Content-Type', '').lower()
+#main function to fetch page text with fallback
+#parameters: url (str) - target URL, use_selenium (bool) - whether to force Selenium, extract_mode (str) - 'text' or 'html'
+#returns: Optional[Dict] - dictionary with page info or None if failed
+def fetch_page_text(url: str, use_selenium: bool = False, extract_mode: str = 'text') -> Optional[Dict]:
+    result = None
+    is_pdf = False
     
-    if 'application/pdf' in content_type:
-        return True
+    if not use_selenium:
+        print(f"[1/2] Trying requests for {url}...")
+        result, is_pdf = fetch_with_requests(url)
     
-    if response.content[:4] == b'%PDF':
-        return True
+    # Fallback to Selenium if we don't have any result
+    if result is None or result == "":
+        print(f"[2/2] Falling back to Selenium for {url}...")
+        html = fetch_with_selenium(url)
+        if html:
+            result = html
+            is_pdf = False  # Selenium returns HTML, not PDF
     
-    return False
-
-def extract_text_from_pdf(pdf_content: bytes, max_pages: int = 50, max_size_mb: int = 10) -> Optional[str]:
-    try:
-        # Check file size limit
-        size_mb = len(pdf_content) / (1024 * 1024)
-        if size_mb > max_size_mb:
-            print(f"[!] PDF too large: {size_mb:.1f}MB (max {max_size_mb}MB)")
-            return None
-        
-        text_parts = []
-        
-        with pdfplumber.open(io.BytesIO(pdf_content)) as pdf:
-            page_count = len(pdf.pages)
-            if page_count > max_pages:
-                print(f"[*] PDF has {page_count} pages, limiting to first {max_pages}")
-            
-            for i, page in enumerate(pdf.pages):
-                if i >= max_pages:
-                    break
-                page_text = page.extract_text()
-                if page_text:
-                    text_parts.append(page_text)
-        
-        full_text = '\n'.join(text_parts)
-        full_text = ' '.join(full_text.split())
-        
-        return full_text
+    if result:
+        if is_pdf:
+            print(f"[+] Successfully extracted {len(result)} characters from PDF: {url}")
+            title = extract_title(text=result)
+            return {
+                "url": url,
+                "type": "pdf",
+                "title": title,
+                "content": result,
+                "length": len(result),
+                "timestamp": time.time()
+            }
+        else:
+            try:
+                content, title = extract_text_from_html(result, mode=extract_mode)
+                content_type = "html_structured" if extract_mode == 'html' else "html"
+                print(f"[+] Successfully extracted {len(content)} characters from {url} (mode: {extract_mode})")
+                return {
+                    "url": url,
+                    "type": content_type,
+                    "title": title,
+                    "content": content,
+                    "length": len(content),
+                    "timestamp": time.time()
+                }
+            except Exception as e:
+                print(f"[!] Failed to parse HTML from {url}: {e}")
+                return None
     
-    except Exception as e:
-        print(f"[!] Error while extracting text from PDF: {e}")
-        return None
+    print(f"[-] All methods failed for {url}")
+    return None
 
 #1st attempt: fetch page using requests
-def fetch_with_requests(url: str, timeout: int = 10, max_size_mb: int = 10) -> Optional[tuple[str, bool]]:
+#parameters: url (str) - target URL, timeout (int) - request timeout, max_size_mb (int) - max content size in MB
+#returns: Optional[tuple[str, bool]] - tuple of (content string, is_pdf flag) or (None, False) if failed
+def fetch_with_requests(url: str, timeout: int = 10, max_size_mb: int = int(os.getenv("MAX_PAGE_SIZE", 10))) -> Optional[tuple[str, bool]]:
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
@@ -125,7 +138,11 @@ def fetch_with_requests(url: str, timeout: int = 10, max_size_mb: int = 10) -> O
         if content[:4] == b'%PDF' or response.headers.get('Content-Type', '').lower().startswith('application/pdf'):
             print(f"[*] PDF detected: {url}")
             text = extract_text_from_pdf(content)
-            return (text, True)
+            if text:
+                return (text, True)
+            else:
+                print(f"[!] PDF text extraction failed, will try Selenium fallback")
+                return (None, False)
 
         #HTML content
         try:
@@ -144,13 +161,22 @@ def fetch_with_requests(url: str, timeout: int = 10, max_size_mb: int = 10) -> O
         return (None, False)
 
 #2nd attempt: fallback to fetch page using Selenium
-def fetch_with_selenium(url: str, timeout: int = 15) -> Optional[str]:
+#parameters: url (str) - target URL, timeout (int) - page load timeout, max_size_mb (int) - max HTML size in MB
+#returns: Optional[str] - page HTML content or None if failed
+def fetch_with_selenium(url: str, timeout: int = 15, max_size_mb: int = int(os.getenv("MAX_PAGE_SIZE", 10))) -> Optional[str]:
     try:
         from selenium import webdriver
         from selenium.webdriver.chrome.options import Options
         from selenium.webdriver.common.by import By
         from selenium.webdriver.support.ui import WebDriverWait
         from selenium.webdriver.support import expected_conditions as EC
+        
+        #check for PDF URLs before loading (save resources)
+        url_lower = url.lower()
+        if url_lower.endswith('.pdf') or '.pdf?' in url_lower or 'file.php' in url_lower:
+            print(f"[!] Selenium cannot extract text from PDF files: {url}")
+            print(f"[*] PDF files should be handled by requests with pdfplumber")
+            return None
         
         print(f"[*] Trying Selenium for {url} (this may take a moment)...")
         
@@ -184,7 +210,15 @@ def fetch_with_selenium(url: str, timeout: int = 15) -> Optional[str]:
             time.sleep(2)
             
             html = driver.page_source
-            print(f"[+] Selenium successfully fetched {url}")
+            
+            #check HTML size after fetching (protection against huge pages)
+            size_mb = len(html.encode('utf-8')) / (1024 * 1024)
+            if size_mb > max_size_mb:
+                print(f"[!] HTML too large: {size_mb:.1f}MB (max {max_size_mb}MB)")
+                print(f"[!] Rejecting oversized content from {url}")
+                return None
+            
+            print(f"[+] Selenium successfully fetched {url} ({size_mb:.1f}MB)")
             
             return html
         finally:
@@ -200,6 +234,8 @@ def fetch_with_selenium(url: str, timeout: int = 15) -> Optional[str]:
         return None
 
 #extract title from HTML or text
+#parameters: soup (BeautifulSoup) - parsed HTML, text (str) - raw text content
+#returns: str - extracted title or fallback title
 def extract_title(soup: BeautifulSoup = None, text: str = None) -> str:
     if soup:
         title_tag = soup.find('title')
@@ -219,6 +255,8 @@ def extract_title(soup: BeautifulSoup = None, text: str = None) -> str:
     return "Untitled"
 
 #get text content from HTML
+#parameters: html (str) - raw HTML content, mode (str) - extraction mode ('text' or 'html'), max_size_mb (int) - max size in MB
+#returns: tuple[str, str] - extracted content and title
 def extract_text_from_html(html: str, mode: str = 'text', max_size_mb: int = 5) -> tuple[str, str]:
     try:
         # Check HTML size limit
@@ -252,6 +290,8 @@ def extract_text_from_html(html: str, mode: str = 'text', max_size_mb: int = 5) 
         return text, title
 
 #clean HTML while preserving semantic structure
+#parameters: element (Tag) - BeautifulSoup Tag element
+#returns: str - cleaned HTML string
 def clean_html(element) -> str:
 
     allowed_tags = {'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 
@@ -281,49 +321,50 @@ def clean_html(element) -> str:
     
     return html_str.strip()
 
-#main function to fetch page text with fallback
-def fetch_page_text(url: str, use_selenium: bool = False, extract_mode: str = 'text') -> Optional[Dict]:
-    result = None
-    is_pdf = False
+#check if response is PDF
+#parameters: response (requests.Response) - HTTP response object
+#returns: bool - True if PDF, False otherwise
+def is_pdf_content(response: requests.Response) -> bool:
+    content_type = response.headers.get('Content-Type', '').lower()
     
-    if not use_selenium:
-        print(f"[1/2] Trying requests for {url}...")
-        result, is_pdf = fetch_with_requests(url)
+    if 'application/pdf' in content_type:
+        return True
     
-    if (result is None or result == "") and not is_pdf:
-        print(f"[2/2] Falling back to Selenium for {url}...")
-        html = fetch_with_selenium(url)
-        if html:
-            result = html
+    if response.content[:4] == b'%PDF':
+        return True
     
-    if result:
-        if is_pdf:
-            print(f"[+] Successfully extracted {len(result)} characters from PDF: {url}")
-            title = extract_title(text=result)
-            return {
-                "url": url,
-                "type": "pdf",
-                "title": title,
-                "content": result,
-                "length": len(result),
-                "timestamp": time.time()
-            }
-        else:
-            try:
-                content, title = extract_text_from_html(result, mode=extract_mode)
-                content_type = "html_structured" if extract_mode == 'html' else "html"
-                print(f"[+] Successfully extracted {len(content)} characters from {url} (mode: {extract_mode})")
-                return {
-                    "url": url,
-                    "type": content_type,
-                    "title": title,
-                    "content": content,
-                    "length": len(content),
-                    "timestamp": time.time()
-                }
-            except Exception as e:
-                print(f"[!] Failed to parse HTML from {url}: {e}")
-                return None
+    return False
+
+#extract text from PDF content
+#parameters: pdf_content (bytes) - raw PDF content, max_pages (int) - max pages to extract, max_size_mb (int) - max size in MB
+#returns: Optional[str] - extracted text or None if failed
+def extract_text_from_pdf(pdf_content: bytes, max_pages: int = 50, max_size_mb: int = 10) -> Optional[str]:
+    try:
+        # Check file size limit
+        size_mb = len(pdf_content) / (1024 * 1024)
+        if size_mb > max_size_mb:
+            print(f"[!] PDF too large: {size_mb:.1f}MB (max {max_size_mb}MB)")
+            return None
+        
+        text_parts = []
+        
+        with pdfplumber.open(io.BytesIO(pdf_content)) as pdf:
+            page_count = len(pdf.pages)
+            if page_count > max_pages:
+                print(f"[*] PDF has {page_count} pages, limiting to first {max_pages}")
+            
+            for i, page in enumerate(pdf.pages):
+                if i >= max_pages:
+                    break
+                page_text = page.extract_text()
+                if page_text:
+                    text_parts.append(page_text)
+        
+        full_text = '\n'.join(text_parts)
+        full_text = ' '.join(full_text.split())
+        
+        return full_text
     
-    print(f"[-] All methods failed for {url}")
-    return None
+    except Exception as e:
+        print(f"[!] Error while extracting text from PDF: {e}")
+        return None

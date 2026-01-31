@@ -5,6 +5,9 @@ from typing import List, Dict, Optional
 _client = None
 _collection = None
 
+#get or create the ChromaDB client
+#parameters: none
+#returns: ChromaDB client instance
 def get_db_client():
     global _client
     if _client is None:
@@ -12,6 +15,9 @@ def get_db_client():
         _client = chromadb.PersistentClient(path=db_path)
     return _client
 
+#get or create the collection
+#parameters: name (str) - name of the collection
+#returns: ChromaDB collection instance
 def get_collection(name: str = "knowledge_base"):
     global _collection
     if _collection is None:
@@ -19,6 +25,9 @@ def get_collection(name: str = "knowledge_base"):
         _collection = client.get_or_create_collection(name=name)
     return _collection
 
+#search the local database
+#parameters: queries (List[str]) - list of query strings, n_results (int) - number of results to return per query
+#returns: List[Dict] - list of search results
 def search_local_db(queries: List[str], n_results: int = 5) -> List[Dict]:
     try:
         collection = get_collection()
@@ -59,19 +68,24 @@ def search_local_db(queries: List[str], n_results: int = 5) -> List[Dict]:
         print(f"[!] Error searching local database: {e}")
         return []
 
-def is_relevant(results: List[Dict], min_relevance: float) -> bool:
+#filter results based on distance threshold
+#parameters: results (List[Dict]) - list of search results, min_relevance (float) - minimum relevance threshold (distance)
+#returns: List[Dict] - list of relevant results only
+def filter_relevant(results: List[Dict], min_relevance: float) -> List[Dict]:
     if not results:
-        return False
+        return []
     
-    relevant_count = 0
+    relevant_results = []
     for result in results:
         distance = result.get('distance')
-        if distance is not None:
-            if distance < min_relevance:
-                relevant_count += 1
+        if distance is not None and distance < min_relevance:
+            relevant_results.append(result)
     
-    return relevant_count > 0
+    return relevant_results
 
+#add or update a document in the local database
+#parameters: content (str) - document content, metadata (Optional[Dict]) - document metadata, doc_id (Optional[str]) - document ID
+#returns: none
 def add_document(content: str, metadata: Optional[Dict] = None, doc_id: Optional[str] = None):
     collection = get_collection()
     
@@ -87,6 +101,9 @@ def add_document(content: str, metadata: Optional[Dict] = None, doc_id: Optional
     
     print(f"[*] Document added/updated in local database: {doc_id}")
 
+#retrieve database statistics
+#parameters: none
+#returns: Dict - database statistics
 def get_db_stats() -> Dict:
     try:
         collection = get_collection()
