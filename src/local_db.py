@@ -5,6 +5,7 @@ from typing import List, Dict, Optional
 
 _client = None
 _collection = None
+_hf_authenticated = False
 
 #get or create the ChromaDB client
 #parameters: none
@@ -20,8 +21,19 @@ def get_db_client():
 #parameters: name (str) - name of the collection
 #returns: ChromaDB collection instance
 def get_collection(name: str = "knowledge_base"):
-    global _collection
+    global _collection, _hf_authenticated
     if _collection is None:
+        if not _hf_authenticated:
+            hf_token = os.getenv("HF_TOKEN")
+            if hf_token:
+                try:
+                    from huggingface_hub import login
+                    login(token=hf_token, add_to_git_credential=False)
+                    print("[*] Authenticated with Hugging Face")
+                except Exception as e:
+                    print(f"[!] Warning: Could not authenticate with Hugging Face: {e}")
+            _hf_authenticated = True
+        
         client = get_db_client()
         
         #model: paraphrase-multilingual-mpnet-base-v2 (278M params, supports 50+ languages)

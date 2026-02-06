@@ -216,7 +216,7 @@ def generate_local_db_queries(user_input, language="auto", max_input_length=500)
                     
                     f"### Example 1:\n"
                     f"User: 'Jaké studijní obory nabízíte?'\n"
-                    f"→ ['studijní obory střední škola',\n"
+                    f"→ ['studijní obory',\n"
                     f"    'maturitní obory technické vzdělávání',\n"
                     f"    'nabídka oborů studium']\n\n"
                     
@@ -224,7 +224,7 @@ def generate_local_db_queries(user_input, language="auto", max_input_length=500)
                     f"User: 'How do I contact you?'\n"
                     f"→ ['contact information email phone',\n"
                     f"    'communication secretariat office',\n"
-                    f"    'how to reach contact details']\n\n"
+                    f"    'contact details']\n\n"
                     
                     f"### Example 3:\n"
                     f"User: 'Kdy jsou přijímací zkoušky?'\n"
