@@ -5,11 +5,17 @@ import logging
 from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from dotenv import load_dotenv
 
 from src.search_engine import execute_search, SearchConfig
-from src.local_db import get_db_stats, add_document_to_db
+from src.local_db import (
+    get_db_stats, 
+    add_document_to_db, 
+    get_all_documents, 
+    get_document_by_id,
+    delete_document
+)
 from src.docker_manager import get_selenium_status
 
 # Configure logging
@@ -48,8 +54,9 @@ class Base64Document(BaseModel):
     filename: str = Field(..., description="Name of the document file")
     content: str = Field(..., description="Base64-encoded document content")
     
-    @validator('content')
-    def validate_base64(cls, v):
+    @field_validator('content')
+    @classmethod
+    def validate_base64(cls, v: str) -> str:
         """Validate that content is valid base64"""
         try:
             base64.b64decode(v, validate=True)
@@ -66,15 +73,17 @@ class SearchRequest(BaseModel):
     internal_mode: Optional[bool] = Field(default=False, description="Return raw results without AI processing")
     language: Optional[str] = Field(default="auto", description="Language for queries: 'auto', 'en', 'cs', 'sk'")
     
-    @validator('search_mode')
-    def validate_search_mode(cls, v):
+    @field_validator('search_mode')
+    @classmethod
+    def validate_search_mode(cls, v: str) -> str:
         """Validate search mode"""
         if v not in ['hybrid', 'local', 'web']:
             raise ValueError("search_mode must be 'hybrid', 'local', or 'web'")
         return v
     
-    @validator('language')
-    def validate_language(cls, v):
+    @field_validator('language')
+    @classmethod
+    def validate_language(cls, v: str) -> str:
         """Validate language"""
         if v not in ['auto', 'en', 'cs', 'sk']:
             raise ValueError("language must be 'auto', 'en', 'cs', or 'sk'")
@@ -118,6 +127,23 @@ class DocumentUploadResponse(BaseModel):
     """Response for document upload"""
     success: bool
     added_count: int
+    message: str
+
+class DocumentInfo(BaseModel):
+    """Information about a single document"""
+    id: str
+    content: str
+    metadata: Dict[str, Any]
+
+class DocumentListResponse(BaseModel):
+    """Response for document list"""
+    success: bool
+    count: int
+    documents: List[DocumentInfo]
+
+class DocumentDeleteResponse(BaseModel):
+    """Response for document deletion"""
+    success: bool
     message: str
 
 # ============================================================================
@@ -298,6 +324,108 @@ async def upload_documents(request: DocumentUploadRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Upload failed: {str(e)}"
+        )
+
+@app.get("/api/db/documents", response_model=DocumentListResponse, tags=["Database"])
+async def list_documents(limit: Optional[int] = None):
+    """
+    List all documents in the database
+    
+    - **limit**: Optional maximum number of documents to return
+    """
+    try:
+        documents = get_all_documents(limit=limit)
+        
+        doc_list = [
+            DocumentInfo(
+                id=doc['id'],
+                content=doc['content'],
+                metadata=doc['metadata']
+            )
+            for doc in documents
+        ]
+        
+        return DocumentListResponse(
+            success=True,
+            count=len(doc_list),
+            documents=doc_list
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to list documents: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list documents: {str(e)}"
+        )
+
+@app.get("/api/db/documents/{doc_id}", response_model=DocumentInfo, tags=["Database"])
+async def get_document(doc_id: str):
+    """
+    Get a specific document by ID
+    
+    - **doc_id**: The document ID to retrieve
+    """
+    try:
+        document = get_document_by_id(doc_id)
+        
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Document not found: {doc_id}"
+            )
+        
+        return DocumentInfo(
+            id=document['id'],
+            content=document['content'],
+            metadata=document['metadata']
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get document {doc_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get document: {str(e)}"
+        )
+
+@app.delete("/api/db/documents/{doc_id}", response_model=DocumentDeleteResponse, tags=["Database"])
+async def delete_document_endpoint(doc_id: str):
+    """
+    Delete a document from the database
+    
+    - **doc_id**: The document ID to delete
+    """
+    try:
+        # Check if document exists first
+        document = get_document_by_id(doc_id)
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Document not found: {doc_id}"
+            )
+        
+        # Delete the document
+        success = delete_document(doc_id)
+        
+        if success:
+            return DocumentDeleteResponse(
+                success=True,
+                message=f"Document {doc_id} deleted successfully"
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to delete document"
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete document {doc_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete document: {str(e)}"
         )
 
 # ============================================================================

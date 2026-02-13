@@ -149,3 +149,75 @@ def add_document_to_db(content: str, metadata: Optional[Dict] = None) -> str:
     doc_id = hashlib.md5(content.encode()).hexdigest()
     add_document(content, metadata, doc_id)
     return doc_id
+
+#get all documents from the database
+#parameters: limit (Optional[int]) - maximum number of documents to return
+#returns: List[Dict] - list of documents with id, content, and metadata
+def get_all_documents(limit: Optional[int] = None) -> List[Dict]:
+    """Retrieve all documents from the database"""
+    try:
+        collection = get_collection()
+        total = collection.count()
+        
+        if total == 0:
+            return []
+        
+        # Get all documents (ChromaDB doesn't have built-in pagination)
+        results = collection.get(
+            limit=limit if limit else total,
+            include=['documents', 'metadatas']
+        )
+        
+        documents = []
+        for i in range(len(results['ids'])):
+            documents.append({
+                'id': results['ids'][i],
+                'content': results['documents'][i],
+                'metadata': results['metadatas'][i] if results['metadatas'] else {}
+            })
+        
+        return documents
+        
+    except Exception as e:
+        print(f"[!] Error retrieving documents: {e}")
+        return []
+
+#get a specific document by ID
+#parameters: doc_id (str) - document ID
+#returns: Optional[Dict] - document with id, content, and metadata, or None if not found
+def get_document_by_id(doc_id: str) -> Optional[Dict]:
+    """Retrieve a specific document by its ID"""
+    try:
+        collection = get_collection()
+        
+        results = collection.get(
+            ids=[doc_id],
+            include=['documents', 'metadatas']
+        )
+        
+        if not results['ids']:
+            return None
+        
+        return {
+            'id': results['ids'][0],
+            'content': results['documents'][0],
+            'metadata': results['metadatas'][0] if results['metadatas'] else {}
+        }
+        
+    except Exception as e:
+        print(f"[!] Error retrieving document {doc_id}: {e}")
+        return None
+
+#delete a document by ID
+#parameters: doc_id (str) - document ID to delete
+#returns: bool - True if deleted, False if not found or error
+def delete_document(doc_id: str) -> bool:
+    """Delete a document from the database"""
+    try:
+        collection = get_collection()
+        collection.delete(ids=[doc_id])
+        print(f"[*] Document deleted: {doc_id}")
+        return True
+    except Exception as e:
+        print(f"[!] Error deleting document {doc_id}: {e}")
+        return False
