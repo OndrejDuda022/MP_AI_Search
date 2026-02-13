@@ -1,9 +1,22 @@
 # Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv/
 
 # Environment
 .env
+
+# Vector Database (runtime data)
+vector_db/
+vector_db_sandbox/
 
 # IDE
 .vscode/
