@@ -134,7 +134,18 @@ def get_db_stats() -> Dict:
         collection = get_collection()
         return {
             'count': collection.count(),
-            'name': collection.name
+            'collection': collection.name,
+            'embedding_model': 'paraphrase-multilingual-mpnet-base-v2'
         }
     except Exception as e:
-        return {'count': 0, 'error': str(e)}
+        return {'count': 0, 'collection': 'unknown', 'error': str(e)}
+
+#add document to database (API-friendly wrapper)
+#parameters: content (str) - document content, metadata (Optional[Dict]) - document metadata
+#returns: str - document ID
+def add_document_to_db(content: str, metadata: Optional[Dict] = None) -> str:
+    """Add a document to the database and return its ID"""
+    import hashlib
+    doc_id = hashlib.md5(content.encode()).hexdigest()
+    add_document(content, metadata, doc_id)
+    return doc_id
