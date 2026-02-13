@@ -36,7 +36,7 @@ def get_collection(name: str = "knowledge_base"):
         
         client = get_db_client()
         
-        #model: paraphrase-multilingual-mpnet-base-v2 (278M params, supports 50+ languages)
+        #model: paraphrase-multilingual-mpnet-base-v2
         multilingual_ef = embedding_functions.SentenceTransformerEmbeddingFunction(
             model_name="paraphrase-multilingual-mpnet-base-v2"
         )
