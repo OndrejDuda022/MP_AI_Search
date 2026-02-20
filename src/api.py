@@ -5,6 +5,7 @@ import logging
 from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, field_validator
 from dotenv import load_dotenv
 
@@ -33,7 +34,7 @@ load_dotenv()
 app = FastAPI(
     title="AI Search API",
     description="AI-powered search with local database and web search capabilities",
-    version="1.0.0"
+    version=os.getenv("VERSION", "not specified")
 )
 
 # Add CORS middleware
@@ -53,7 +54,9 @@ class Base64Document(BaseModel):
     """Model for base64-encoded documents"""
     filename: str = Field(..., description="Name of the document file")
     content: str = Field(..., description="Base64-encoded document content")
-    
+    id: Optional[str] = Field(default=None, description="Optional custom document ID")
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Optional per-document metadata")
+
     @field_validator('content')
     @classmethod
     def validate_base64(cls, v: str) -> str:
@@ -120,13 +123,18 @@ class DatabaseStats(BaseModel):
     embedding_model: str
 
 class DocumentUploadRequest(BaseModel):
-    """Request to add documents to local database"""
+    """Request to add documents to local database."""
     documents: List[Base64Document]
+    default_metadata: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Metadata applied to all documents unless overridden per-document"
+    )
 
 class DocumentUploadResponse(BaseModel):
     """Response for document upload"""
     success: bool
     added_count: int
+    document_ids: List[str] = Field(default_factory=list, description="IDs assigned to each added document")
     message: str
 
 class DocumentInfo(BaseModel):
@@ -157,11 +165,35 @@ async def root():
         "name": "AI Search API",
         "version": "1.0.0",
         "docs": "/docs",
-        "health": "/api/health"
+        "health": "/api/health",
+        "search": "/search",
+        "db_manager": "/db-manager"
     }
 
+@app.get("/search", tags=["General"])
+async def search_interface():
+    """Serve the search web interface"""
+    search_path = os.path.join(os.path.dirname(__file__), "search.html")
+    if not os.path.exists(search_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Search interface not found"
+        )
+    return FileResponse(search_path, media_type="text/html")
+
+@app.get("/db-manager", tags=["General"])
+async def db_manager():
+    """Serve the database manager web interface"""
+    db_manager_path = os.path.join(os.path.dirname(__file__), "db_manager.html")
+    if not os.path.exists(db_manager_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Database manager not found"
+        )
+    return FileResponse(db_manager_path, media_type="text/html")
+
 @app.get("/api/health", response_model=HealthResponse, tags=["General"])
-async def health_check():
+def health_check():
     """Health check endpoint"""
     try:
         db_stats = get_db_stats()
@@ -180,7 +212,7 @@ async def health_check():
         )
 
 @app.get("/api/db/stats", response_model=DatabaseStats, tags=["Database"])
-async def get_database_stats():
+def get_database_stats():
     """Get database statistics"""
     try:
         stats = get_db_stats()
@@ -197,7 +229,7 @@ async def get_database_stats():
         )
 
 @app.post("/api/search", response_model=SearchResponse, tags=["Search"])
-async def search(request: SearchRequest):
+def search(request: SearchRequest):
     """
     Execute search query with optional base64 documents
     
@@ -289,36 +321,42 @@ async def search(request: SearchRequest):
         )
 
 @app.post("/api/db/upload", response_model=DocumentUploadResponse, tags=["Database"])
-async def upload_documents(request: DocumentUploadRequest):
-    """
-    Upload base64-encoded documents to the local database
-    
-    - **documents**: List of base64-encoded documents with filenames
-    """
+def upload_documents(request: DocumentUploadRequest):
+    """Upload one or more base64-encoded documents to the local database."""
     try:
         added_count = 0
-        
+        document_ids: List[str] = []
+
         for doc in request.documents:
             try:
                 # Decode base64 content
                 content = base64.b64decode(doc.content).decode('utf-8', errors='ignore')
-                
-                # Add to database
-                add_document_to_db(
+
+                # Build merged metadata: defaults < per-document values
+                merged_metadata: Dict[str, Any] = {"filename": doc.filename}
+                if request.default_metadata:
+                    merged_metadata.update(request.default_metadata)
+                if doc.metadata:
+                    merged_metadata.update(doc.metadata)
+
+                issued_id = add_document_to_db(
                     content=content,
-                    metadata={"filename": doc.filename}
+                    metadata=merged_metadata,
+                    doc_id=doc.id  # per-document ID (None → auto-generated)
                 )
+                document_ids.append(issued_id)
                 added_count += 1
-                logger.info(f"Added document '{doc.filename}' to database")
+                logger.info(f"Added document '{doc.filename}' with id '{issued_id}'")
             except Exception as e:
                 logger.warning(f"Failed to add document '{doc.filename}': {e}")
-        
+
         return DocumentUploadResponse(
             success=added_count > 0,
             added_count=added_count,
+            document_ids=document_ids,
             message=f"Successfully added {added_count}/{len(request.documents)} documents"
         )
-        
+
     except Exception as e:
         logger.error(f"Document upload failed: {e}")
         raise HTTPException(
@@ -327,7 +365,7 @@ async def upload_documents(request: DocumentUploadRequest):
         )
 
 @app.get("/api/db/documents", response_model=DocumentListResponse, tags=["Database"])
-async def list_documents(limit: Optional[int] = None):
+def list_documents(limit: Optional[int] = None):
     """
     List all documents in the database
     
@@ -359,7 +397,7 @@ async def list_documents(limit: Optional[int] = None):
         )
 
 @app.get("/api/db/documents/{doc_id}", response_model=DocumentInfo, tags=["Database"])
-async def get_document(doc_id: str):
+def get_document(doc_id: str):
     """
     Get a specific document by ID
     
@@ -390,7 +428,7 @@ async def get_document(doc_id: str):
         )
 
 @app.delete("/api/db/documents/{doc_id}", response_model=DocumentDeleteResponse, tags=["Database"])
-async def delete_document_endpoint(doc_id: str):
+def delete_document_endpoint(doc_id: str):
     """
     Delete a document from the database
     

@@ -22,27 +22,12 @@ class SearchConfig:
     language: str = "auto"
     minimal_sources: int = 3
     maximal_sources: int = 5
-    min_relevance: float = 0.6
+    min_relevance: float = 0.45
 
+#main search execution function
+#parameters: query (str) - user search query, config (SearchConfig) - search configuration
+#returns: Dict[str, Any] - search results and metadata
 def execute_search(query: str, config: Optional[SearchConfig] = None) -> Dict[str, Any]:
-    """
-    Execute search with given query and configuration.
-    
-    Args:
-        query: Search query string
-        config: Search configuration (uses defaults if None)
-        
-    Returns:
-        Dictionary with search results:
-        {
-            'success': bool,
-            'query': str,
-            'contents': List[Dict],  # Raw source contents
-            'sources': List[Dict],   # Source metadata
-            'ai_response': AIResponse or None,
-            'message': str
-        }
-    """
     # Use default config if not provided
     if config is None:
         config = SearchConfig(
@@ -51,7 +36,7 @@ def execute_search(query: str, config: Optional[SearchConfig] = None) -> Dict[st
             internal_mode=os.getenv("INTERNAL_MODE", "True").lower() == "true",
             minimal_sources=int(os.getenv("MINIMAL_SOURCES", "3")),
             maximal_sources=int(os.getenv("MAXIMAL_SOURCES", "5")),
-            min_relevance=float(os.getenv("MIN_RELEVANCE", "0.6"))
+            min_relevance=float(os.getenv("MIN_RELEVANCE", "0.45"))
         )
     
     # Validate query
@@ -79,9 +64,7 @@ def execute_search(query: str, config: Optional[SearchConfig] = None) -> Dict[st
     contents = []
     messages = []
     
-    # ========================================================================
-    # LOCAL DATABASE SEARCH
-    # ========================================================================
+    # Local database search
     if config.use_local_db and config.search_mode in ["hybrid", "local"]:
         logger.info("Searching local database...")
         messages.append("Searching local database...")
@@ -125,9 +108,7 @@ def execute_search(query: str, config: Optional[SearchConfig] = None) -> Dict[st
             logger.info("Local database is empty")
             messages.append("Local database is empty")
     
-    # ========================================================================
-    # WEB SEARCH
-    # ========================================================================
+    # Web search if needed
     if config.search_mode in ["hybrid", "web"] and len(contents) < config.minimal_sources:
         logger.info("Preparing web search...")
         messages.append("Preparing web search...")
@@ -211,9 +192,7 @@ def execute_search(query: str, config: Optional[SearchConfig] = None) -> Dict[st
                     if content:
                         contents.append(content)
     
-    # ========================================================================
-    # PROCESS RESULTS
-    # ========================================================================
+    # Post-search processing
     if not contents:
         return {
             'success': False,
@@ -249,8 +228,10 @@ def execute_search(query: str, config: Optional[SearchConfig] = None) -> Dict[st
         'message': '; '.join(messages)
     }
 
+#extract source information from contents for display
+#parameters: contents (List[Dict]) - list of content dictionaries with potential source info
+#returns: List[Dict] - list of source info dictionaries with url, title, type, and length
 def _extract_source_info(contents: List[Dict]) -> List[Dict]:
-    """Extract source metadata from content list"""
     sources = []
     for content in contents:
         sources.append({

@@ -7,9 +7,23 @@ An intelligent search system that combines Google Custom Search API with advance
 - [ ] Implement search retry mechanism for irrelevant results
 - [ ] Add caching layer for frequently accessed pages
 - [ ] Support for more document formats (DOCX, XLSX, etc.)
-- [ ] Add web interface
+- [x] Add web interface (Database Manager available at `/db-manager`)
 
 ## Features
+
+### **Web-Based Search Interface**
+- **User-friendly search UI** - No API tools needed, search directly from your browser
+- **Full configuration options** - Search mode, language, local DB toggle
+- **Document upload** - Attach files to search context on-the-fly
+- **Beautiful results display** - AI summary, key points, and source cards
+- **Real-time processing** - Live search with loading indicators
+
+### **Web-Based Database Manager**
+- **Modern web interface** for managing local ChromaDB knowledge base
+- **Real-time statistics** - View document count and collection info
+- **Bulk document upload** - Upload multiple text files (.txt, .md, .json)
+- **Document browser** - View, expand, and delete documents
+- **No installation required** - Pure JavaScript, access at `/db-manager` endpoint
 
 ### **Local Vector Database (ChromaDB)**
 - **Multilingual semantic search** using `paraphrase-multilingual-mpnet-base-v2` embedding model
@@ -134,10 +148,14 @@ MAXIMAL_SOURCES=5
 MIN_RELEVANCE=0.7  # Distance threshold (lower = more similar)
 
 # Selenium Remote URL (optional)
-# If set, Selenium will use RemoteWebDriver (e.g., Docker container)
+# If set, Selenium will try to use RemoteWebDriver (e.g., Docker container)
 # Example: http://localhost:4444/wd/hub
-# Leave empty to use local ChromeDriver
+# Leave empty to use local ChromeDriver directly
 SELENIUM_REMOTE_URL=
+
+# Selenium Fallback (optional - default: True)
+# If remote Selenium is unavailable, allow fallback to local ChromeDriver
+ALLOW_LOCAL_SELENIUM=True
 
 # Python Path (if needed)
 PYTHONPATH=./src
@@ -145,54 +163,50 @@ PYTHONPATH=./src
 
 4. **Setup Selenium (optional but recommended):**
 
-**Option A: Automated Docker setup (Windows - recommended)**
-```powershell
-# Start Selenium container (automatically pulls image if needed)
-.\src\scripts\start_selenium.ps1
-
-# Stop the container when done
-.\src\scripts\stop_selenium.ps1
-```
-
+**Option A: Automated Docker setup (Windows - recommended)** \
 The script automatically:
 - Checks if Docker is running
 - Pulls `selenium/standalone-chrome:latest` if not present
 - Creates and starts the container with security constraints
 - Configures resource limits (1.5 CPU cores, 1GB RAM)
 
-**Option B: Manual Docker setup (Linux/Mac)**
-```bash
-# Pull and run Selenium container
-docker pull selenium/standalone-chrome:latest
-
-docker run \
-  --name selenium-chrome \
-  --detach \
-  --rm \
-  --publish 4444:4444 \
-  --shm-size=1g \
-  --cpus="1.5" \
-  --memory="1g" \
-  --security-opt no-new-privileges \
-  --pids-limit 512 \
-  selenium/standalone-chrome:latest
-```
-
 **Then update your .env file:**
 ```env
 SELENIUM_REMOTE_URL=http://localhost:4444/wd/hub
 ```
 
-**Option C: Local ChromeDriver (no Docker)**
+**Option B: Local ChromeDriver (no Docker)**
 
 If you don't use Docker, `webdriver-manager` will automatically download and manage ChromeDriver. No additional setup required, but leave `SELENIUM_REMOTE_URL` empty in `.env`.
 
 ## 📖 Usage
 
+### Command Line Interface
+
 Run the interactive search:
 ```bash
 python src/main.py
 ```
+
+### Web API & Database Manager
+
+Start the REST API server:
+
+**Windows:**
+```powershell
+.\start_api.ps1
+```
+
+**Linux/Mac:**
+```bash
+chmod +x start_api.sh
+./start_api.sh
+```
+
+Then access:
+- **Search Interface**: http://localhost:8000/search
+- **API Documentation**: http://localhost:8000/docs
+- **Database Manager**: http://localhost:8000/db-manager
 
 ## Testing
 

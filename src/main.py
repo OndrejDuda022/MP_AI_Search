@@ -1,3 +1,4 @@
+"""Main entry point for the AI Search application. Handles user input, executes search, and displays results."""
 #load necessary libraries
 import os
 import sys

@@ -1,3 +1,4 @@
+"""Module for searching web pages and extracting content, with support for both requests and Selenium as a fallback."""
 import os
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -160,6 +161,19 @@ def fetch_with_requests(url: str, timeout: int = 10, max_size_mb: int = int(os.g
         print(f"[!] Requests failed for {url}: {e}")
         return (None, False)
 
+#check if remote Selenium server is reachable
+#parameters: remote_url (str) - remote Selenium URL
+#returns: bool - True if reachable, False otherwise
+def _is_remote_selenium_available(remote_url: str) -> bool:
+    try:
+        import requests
+        # Check if Selenium server is responding
+        status_url = remote_url.replace('/wd/hub', '/status')
+        response = requests.get(status_url, timeout=2)
+        return response.status_code == 200
+    except:
+        return False
+
 #2nd attempt: fallback to fetch page using Selenium
 #parameters: url (str) - target URL, timeout (int) - page load timeout, max_size_mb (int) - max HTML size in MB
 #returns: Optional[str] - page HTML content or None if failed
@@ -188,14 +202,43 @@ def fetch_with_selenium(url: str, timeout: int = 15, max_size_mb: int = int(os.g
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option('useAutomationExtension', False)
         
-        # Check if using remote Selenium 
-        remote_url = os.getenv("SELENIUM_REMOTE_URL")
+        # Determine which WebDriver to use
+        remote_url = os.getenv("SELENIUM_REMOTE_URL", "").strip()
+        allow_local_fallback = os.getenv("ALLOW_LOCAL_SELENIUM", "True").lower() == "true"
+        
+        driver = None
+        
         if remote_url:
-            print(f"[*] Using remote Selenium at {remote_url}")
-            driver = webdriver.Remote(command_executor=remote_url, options=chrome_options)
+            # Try remote Selenium first
+            if _is_remote_selenium_available(remote_url):
+                print(f"[*] Using remote Selenium at {remote_url}")
+                try:
+                    driver = webdriver.Remote(command_executor=remote_url, options=chrome_options)
+                except Exception as e:
+                    print(f"[!] Failed to connect to remote Selenium: {e}")
+                    driver = None
+            else:
+                print(f"[!] Remote Selenium at {remote_url} is not available")
+            
+            # Fall back to local if remote failed and fallback is allowed
+            if driver is None and allow_local_fallback:
+                print(f"[*] Falling back to local ChromeDriver...")
+                try:
+                    driver = webdriver.Chrome(options=chrome_options)
+                except Exception as e:
+                    print(f"[!] Failed to start local ChromeDriver: {e}")
+                    return None
+            elif driver is None:
+                print(f"[!] Remote Selenium unavailable and local fallback is disabled")
+                return None
         else:
-            # Local ChromeDriver 
-            driver = webdriver.Chrome(options=chrome_options)
+            # Use local ChromeDriver directly
+            print(f"[*] Using local ChromeDriver")
+            try:
+                driver = webdriver.Chrome(options=chrome_options)
+            except Exception as e:
+                print(f"[!] Failed to start local ChromeDriver: {e}")
+                return None
         
         driver.set_page_load_timeout(timeout)
         

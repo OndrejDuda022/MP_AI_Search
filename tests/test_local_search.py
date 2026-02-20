@@ -17,8 +17,9 @@ def test_local_with_direct_query():
     results = search_local_db([query], n_results=3)
     
     #filter with low relevance threshold
-    min_relevance = 0.7
-    relevant_results = [res for res in results if res['distance'] is not None and res['distance'] <= min_relevance]
+    # distance is squared L2; for unit vectors: cosine_sim = 1 - distance/2
+    min_relevance = 0.45
+    relevant_results = [res for res in results if res['distance'] is not None and (1.0 - res['distance'] / 2.0) >= min_relevance]
     
     if not relevant_results:
         print("No relevant documents found.")
@@ -26,7 +27,8 @@ def test_local_with_direct_query():
         print(f"Found {len(relevant_results)} documents:\n")
         for i, result in enumerate(relevant_results, 1):
             print(f"{i}. {result['content']}")
-            print(f"   Score: {result['distance']:.4f}\n")
+            cosine_sim = 1.0 - result['distance'] / 2.0
+            print(f"   Score: {result['distance']:.4f}  (cosine_sim: {cosine_sim:.4f})\n")
 
 #test with AI-generated queries
 def test_local_with_generated_queries():
@@ -56,17 +58,19 @@ def test_local_with_generated_queries():
         print()
     
     #filter with low relevance threshold
-    min_relevance = 0.7
-    relevant_results = [res for res in results if res['distance'] is not None and res['distance'] <= min_relevance]
+    # distance is squared L2; for unit vectors: cosine_sim = 1 - distance/2
+    min_relevance = 0.45
+    relevant_results = [res for res in results if res['distance'] is not None and (1.0 - res['distance'] / 2.0) >= min_relevance]
     
     print(f"\n{'='*60}")
     if not relevant_results:
-        print(f"No relevant documents found (threshold: {min_relevance}).")
+        print(f"No relevant documents found (cosine_sim threshold: {min_relevance}).")
     else:
-        print(f"Found {len(relevant_results)} documents passing threshold {min_relevance}:\n")
+        print(f"Found {len(relevant_results)} documents passing cosine_sim threshold {min_relevance}:\n")
         for i, result in enumerate(relevant_results, 1):
+            cosine_sim = 1.0 - result['distance'] / 2.0
             print(f"{i}. {result['content']}")
-            print(f"   Score: {result['distance']:.4f}\n")
+            print(f"   Score: {result['distance']:.4f}  (cosine_sim: {cosine_sim:.4f})\n")
 
 #run tests
 if __name__ == "__main__":

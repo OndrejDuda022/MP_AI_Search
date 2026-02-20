@@ -1,11 +1,41 @@
+"""Local database management using ChromaDB with a local embedding model."""
 import os
 import chromadb
-from chromadb.utils import embedding_functions
+from chromadb import EmbeddingFunction, Documents, Embeddings
+from chromadb.config import Settings
 from typing import List, Dict, Optional
+import uuid
+import logging
+
+# Initialize logger
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 _client = None
-_collection = None
-_hf_authenticated = False
+_collection = None  
+_embedding_function = None
+_model = None  # Cache the model globally
+
+
+#local embedding function (module-level class for proper ChromaDB serialization)
+class _LocalEmbeddingFunction(EmbeddingFunction[Documents]):
+    """Local-only embedding function using SentenceTransformer."""
+    
+    model_name = "paraphrase-multilingual-mpnet-base-v2"
+
+    def __call__(self, input: Documents) -> Embeddings:  # noqa: A002
+        global _model
+        if _model is None:
+            from sentence_transformers import SentenceTransformer
+            local_model_path = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "models", "paraphrase-multilingual-mpnet-base-v2")
+            )
+            _model = SentenceTransformer(local_model_path, local_files_only=True)
+        # normalize_embeddings=True ensures unit vectors so that the
+        # squared-L2 distance returned by ChromaDB maps cleanly to
+        # cosine similarity via:  cosine_sim = 1 - (L2_squared / 2)
+        embeddings = _model.encode(input, convert_to_numpy=True, normalize_embeddings=True)
+        return embeddings.tolist()
 
 #get or create the ChromaDB client
 #parameters: none
@@ -13,41 +43,45 @@ _hf_authenticated = False
 def get_db_client():
     global _client
     if _client is None:
-        db_path = os.path.join(os.path.dirname(__file__), "..", "vector_db")
-        _client = chromadb.PersistentClient(path=db_path)
+        db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "vector_db"))
+        _client = chromadb.PersistentClient(
+            path=db_path,
+            settings=Settings(anonymized_telemetry=False)
+        )
+        logger.info(f"ChromaDB client initialised at: {db_path}")
     return _client
+
+#build a local-only embedding function using SentenceTransformer directly
+#parameters: none
+#returns: callable embedding function
+def get_embedding_function():
+    global _embedding_function
+    if _embedding_function is None:
+        local_model_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "models", "paraphrase-multilingual-mpnet-base-v2")
+        )
+        logger.info(f"Loading embedding model from local path: {local_model_path}")
+        
+        _embedding_function = _LocalEmbeddingFunction()
+        logger.info("Local embedding model loaded successfully (no network access).")
+    return _embedding_function
 
 #get or create the collection
 #parameters: name (str) - name of the collection
 #returns: ChromaDB collection instance
 def get_collection(name: str = "knowledge_base"):
-    global _collection, _hf_authenticated
+    global _collection
     if _collection is None:
-        if not _hf_authenticated:
-            hf_token = os.getenv("HF_TOKEN")
-            if hf_token:
-                try:
-                    from huggingface_hub import login
-                    login(token=hf_token, add_to_git_credential=False)
-                    print("[*] Authenticated with Hugging Face")
-                except Exception as e:
-                    print(f"[!] Warning: Could not authenticate with Hugging Face: {e}")
-            _hf_authenticated = True
-        
         client = get_db_client()
-        
-        #model: paraphrase-multilingual-mpnet-base-v2
-        multilingual_ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name="paraphrase-multilingual-mpnet-base-v2"
-        )
-        
+        ef = get_embedding_function()
+
         _collection = client.get_or_create_collection(
             name=name,
-            embedding_function=multilingual_ef,
+            embedding_function=ef,
             metadata={"description": "Knowledge base with multilingual embeddings"}
         )
-        
-        print(f"[*] Using embedding model: paraphrase-multilingual-mpnet-base-v2")
+
+        logger.info(f"Using collection '{name}' with local embedding model.")
     return _collection
 
 #search the local database
@@ -93,8 +127,8 @@ def search_local_db(queries: List[str], n_results: int = 5) -> List[Dict]:
         print(f"[!] Error searching local database: {e}")
         return []
 
-#filter results based on distance threshold
-#parameters: results (List[Dict]) - list of search results, min_relevance (float) - minimum relevance threshold (distance)
+#filter results based on cosine similarity threshold
+#parameters: results (List[Dict]) - list of search results, min_relevance (float) - minimum cosine similarity (0-1, higher = stricter)
 #returns: List[Dict] - list of relevant results only
 def filter_relevant(results: List[Dict], min_relevance: float) -> List[Dict]:
     if not results:
@@ -103,8 +137,15 @@ def filter_relevant(results: List[Dict], min_relevance: float) -> List[Dict]:
     relevant_results = []
     for result in results:
         distance = result.get('distance')
-        if distance is not None and distance < min_relevance:
-            relevant_results.append(result)
+        if distance is not None:
+            # ChromaDB's default "l2" metric stores the *squared* Euclidean
+            # distance (|A-B|^2).  For unit-normalized embeddings this equals
+            # 2*(1 - cosine_similarity), so:
+            #   cosine_similarity = 1 - (L2_squared / 2)
+            # Range: 1.0 = identical, 0.0 = orthogonal, -1.0 = opposite.
+            cosine_sim = 1.0 - distance / 2.0
+            if cosine_sim >= min_relevance:
+                relevant_results.append(result)
     
     return relevant_results
 
@@ -113,18 +154,18 @@ def filter_relevant(results: List[Dict], min_relevance: float) -> List[Dict]:
 #returns: none
 def add_document(content: str, metadata: Optional[Dict] = None, doc_id: Optional[str] = None):
     collection = get_collection()
-    
+
     if doc_id is None:
-        import hashlib
-        doc_id = hashlib.md5(content.encode()).hexdigest()
-    
-    collection.upsert(
-        documents=[content],
+        # Generate a unique ID if not provided
+        doc_id = str(uuid.uuid4())
+
+    # Use the add method to insert or overwrite the document
+    collection.add(
+        documents=[content],    
         ids=[doc_id],
-        metadatas=[metadata] if metadata else None
+        metadatas=[metadata or {}]
     )
-    
-    print(f"[*] Document added/updated in local database: {doc_id}")
+    logger.info(f"Document with ID '{doc_id}' added/updated successfully.")
 
 #retrieve database statistics
 #parameters: none
@@ -141,12 +182,16 @@ def get_db_stats() -> Dict:
         return {'count': 0, 'collection': 'unknown', 'error': str(e)}
 
 #add document to database (API-friendly wrapper)
-#parameters: content (str) - document content, metadata (Optional[Dict]) - document metadata
+#parameters: content (str) - document content, metadata (Optional[Dict]) - document metadata, doc_id (Optional[str]) - document ID
 #returns: str - document ID
-def add_document_to_db(content: str, metadata: Optional[Dict] = None) -> str:
+def add_document_to_db(content: str, metadata: Optional[Dict] = None, doc_id: Optional[str] = None) -> str:
     """Add a document to the database and return its ID"""
     import hashlib
-    doc_id = hashlib.md5(content.encode()).hexdigest()
+
+    # Generate doc_id if not provided
+    if doc_id is None:
+        doc_id = hashlib.md5(content.encode()).hexdigest()
+
     add_document(content, metadata, doc_id)
     return doc_id
 

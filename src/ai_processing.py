@@ -1,3 +1,4 @@
+"""Backend module for AI processing: generating search queries and summarizing results with AI."""
 import os
 import requests
 import json
