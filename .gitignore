@@ -11,6 +11,9 @@ env/
 ENV/
 .venv/
 
+# Model Checkpoints
+models/
+
 # Environment
 .env
 
