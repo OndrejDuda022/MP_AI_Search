@@ -24,3 +24,6 @@ vector_db_sandbox/
 # IDE
 .vscode/
 .idea/
+
+# Local programs
+google-chrome-stable_current_amd64.deb

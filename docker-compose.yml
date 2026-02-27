@@ -1,0 +1,52 @@
+# ============================================================================
+# AI Search API - Docker Compose
+# ============================================================================
+# Services:
+#   api      - FastAPI application
+#   selenium - Selenium standalone Chrome for JS-heavy page scraping
+# ============================================================================
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-search-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Signal to the app that it is running inside a container
+      - DOCKER_CONTAINER=true
+      # Override Selenium URL to point at the compose service
+      - SELENIUM_REMOTE_URL=http://selenium:4444/wd/hub
+      # Enable Selenium health-check before web scraping
+      - CONTAIN_SELENIUM=True
+      # Disable local ChromeDriver fallback inside the container
+      - ALLOW_LOCAL_SELENIUM=False
+      - PYTHONPATH=/app
+    volumes:
+      # Persist the vector database between restarts
+      - ./vector_db:/app/vector_db
+      # Mount the local embedding model (avoids baking ~500 MB into the image)
+      - ./models:/app/models
+    depends_on:
+      selenium:
+        condition: service_healthy
+    restart: unless-stopped
+
+  selenium:
+    image: selenium/standalone-chrome:latest
+    container_name: selenium-chrome
+    shm_size: '2gb'
+    ports:
+      - "4444:4444"
+      - "7900:7900"   # noVNC viewer – open http://localhost:7900 to watch the browser
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4444/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped

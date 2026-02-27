@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from src.page_search import search_google, fetch_page_text
 from src.ai_processing import process_with_ai, generate_search_queries, generate_local_db_queries
 from src.local_db import search_local_db, filter_relevant, get_db_stats
-from src.docker_manager import ensure_selenium_container
+from src.docker_manager import ensure_selenium_container, is_running_in_container
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -132,9 +132,26 @@ def execute_search(query: str, config: Optional[SearchConfig] = None) -> Dict[st
         
         logger.info(f"Web search queries: {search_queries}")
         
-        # Check Selenium container
-        selenium_required = os.getenv("CONTAIN_SELENIUM", "False").lower() == "true"
-        allow_fallback = os.getenv("ALLOW_LOCAL_SELENIUM", "False").lower() == "true"
+        # Determine whether Selenium management is needed.
+        in_container = is_running_in_container()
+        remote_url = os.getenv("SELENIUM_REMOTE_URL", "").strip()
+
+        # Trust SELENIUM_REMOTE_URL only when it was injected by the container
+        # environment (i.e. we are actually inside a container).  If we are
+        # running locally the variable may be a leftover docker-compose value
+        # pointing at a hostname that doesn't resolve outside the Compose network.
+        effective_remote_url = remote_url if (in_container or not remote_url) else ""
+
+        selenium_required = (
+            in_container                                              # sidecar service
+            or bool(effective_remote_url)                            # explicit remote
+            or os.getenv("CONTAIN_SELENIUM", "False").lower() == "true"  # opt-in
+        )
+        # Local ChromeDriver fallback only makes sense outside a container
+        allow_fallback = (
+            not in_container
+            and os.getenv("ALLOW_LOCAL_SELENIUM", "True").lower() == "true"
+        )
         
         can_proceed = True
         if selenium_required:

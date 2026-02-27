@@ -203,8 +203,21 @@ def fetch_with_selenium(url: str, timeout: int = 15, max_size_mb: int = int(os.g
         chrome_options.add_experimental_option('useAutomationExtension', False)
         
         # Determine which WebDriver to use
-        remote_url = os.getenv("SELENIUM_REMOTE_URL", "").strip()
-        allow_local_fallback = os.getenv("ALLOW_LOCAL_SELENIUM", "True").lower() == "true"
+        from src.docker_manager import is_running_in_container
+        in_container = is_running_in_container()
+
+        # Trust SELENIUM_REMOTE_URL only when inside a container – the value may
+        # be a leftover docker-compose setting pointing at a hostname that doesn't
+        # resolve outside the Compose network.
+        _raw_remote = os.getenv("SELENIUM_REMOTE_URL", "").strip()
+        remote_url = _raw_remote if (in_container or not _raw_remote) else ""
+
+        # Inside a Docker container there is no local Chrome – never try it.
+        # Outside a container, respect ALLOW_LOCAL_SELENIUM (defaults True).
+        if in_container:
+            allow_local_fallback = False
+        else:
+            allow_local_fallback = os.getenv("ALLOW_LOCAL_SELENIUM", "True").lower() == "true"
         
         driver = None
         
