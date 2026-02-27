@@ -52,22 +52,20 @@ def ensure_selenium_container() -> bool:
     Ensure Selenium is available, adapting to the current environment.
 
     Decision logic:
-    - Running in a Docker container  → HTTP-ping SELENIUM_REMOTE_URL only
-                                       (no Docker SDK; sidecar is managed by Compose)
-    - Running locally, SELENIUM_REMOTE_URL set → HTTP-ping that URL
-    - Running locally, no SELENIUM_REMOTE_URL  → Docker SDK: start/reuse a local
-                                                  selenium container, then export its
-                                                  URL via os.environ so page_search.py
-                                                  picks it up automatically
+    - Running in a Docker container  → HTTP-ping SELENIUM_REMOTE_URL
+                                       (sidecar managed by Compose, no Docker SDK)
+    - Running locally               → Docker SDK: start/reuse a local selenium
+                                       container, then export SELENIUM_REMOTE_URL
+                                       so page_search.py picks it up.
+                                       If Docker is unavailable, returns False and
+                                       page_search.py falls back to local ChromeDriver.
 
     Returns:
         bool: True if Selenium is ready, False otherwise
     """
-    remote_url = _remote_url()
-
-    # ── containerised or explicit remote URL ─────────────────────────────────
-    if remote_url or is_running_in_container():
-        target = remote_url or SELENIUM_URL  # fallback to localhost inside container
+    # ── containerised: use the sidecar service ────────────────────────────────
+    if is_running_in_container():
+        target = _remote_url() or SELENIUM_URL
         print(f"[*] Checking remote Selenium at {target}...")
         if _check_remote_selenium(target):
             print("[+] Remote Selenium is ready")
@@ -75,7 +73,7 @@ def ensure_selenium_container() -> bool:
         print("[!] Remote Selenium is not reachable")
         return False
 
-    # ── local Docker SDK path ────────────────────────────────────────────────
+    # ── local: always try Docker SDK regardless of SELENIUM_REMOTE_URL ───────
     print("[*] Checking Selenium container (local Docker)...")
     
     try:

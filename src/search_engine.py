@@ -132,48 +132,36 @@ def execute_search(query: str, config: Optional[SearchConfig] = None) -> Dict[st
         
         logger.info(f"Web search queries: {search_queries}")
         
-        # Determine whether Selenium management is needed.
         in_container = is_running_in_container()
-        remote_url = os.getenv("SELENIUM_REMOTE_URL", "").strip()
 
-        # Trust SELENIUM_REMOTE_URL only when it was injected by the container
-        # environment (i.e. we are actually inside a container).  If we are
-        # running locally the variable may be a leftover docker-compose value
-        # pointing at a hostname that doesn't resolve outside the Compose network.
-        effective_remote_url = remote_url if (in_container or not remote_url) else ""
-
-        selenium_required = (
-            in_container                                              # sidecar service
-            or bool(effective_remote_url)                            # explicit remote
-            or os.getenv("CONTAIN_SELENIUM", "False").lower() == "true"  # opt-in
-        )
-        # Local ChromeDriver fallback only makes sense outside a container
-        allow_fallback = (
-            not in_container
-            and os.getenv("ALLOW_LOCAL_SELENIUM", "True").lower() == "true"
-        )
+        # Always attempt to ensure Selenium is available.
+        # - Local: ensure_selenium_container() tries Docker SDK and sets
+        #          SELENIUM_REMOTE_URL=localhost:4444 if a container is found.
+        # - Container: checks the Compose sidecar via HTTP ping.
+        # If it fails locally, we fall back to local ChromeDriver.
+        # If it fails inside a container, web scraping is skipped.
+        allow_fallback = not in_container  # local ChromeDriver only makes sense outside a container
         
         can_proceed = True
-        if selenium_required:
-            if ensure_selenium_container():
-                logger.info("Selenium container ready")
-                messages.append("Selenium container ready")
-            elif allow_fallback:
-                logger.info("Selenium container failed, falling back to local ChromeDriver...")
-                messages.append("Falling back to local ChromeDriver")
-            else:
-                logger.warning("Selenium container failed and fallback is not allowed")
-                messages.append("Selenium container failed, fallback not allowed")
-                if len(contents) == 0:
-                    return {
-                        'success': False,
-                        'query': query,
-                        'contents': [],
-                        'sources': [],
-                        'ai_response': None,
-                        'message': 'No local results and Selenium unavailable'
-                    }
-                can_proceed = False
+        if ensure_selenium_container():
+            logger.info("Selenium ready")
+            messages.append("Selenium ready")
+        elif allow_fallback:
+            logger.info("Selenium unavailable, falling back to local ChromeDriver...")
+            messages.append("Falling back to local ChromeDriver")
+        else:
+            logger.warning("Selenium unavailable and fallback is not allowed")
+            messages.append("Selenium unavailable, fallback not allowed")
+            if len(contents) == 0:
+                return {
+                    'success': False,
+                    'query': query,
+                    'contents': [],
+                    'sources': [],
+                    'ai_response': None,
+                    'message': 'No local results and Selenium unavailable'
+                }
+            can_proceed = False
         
         if can_proceed:
             max_results = int(os.getenv("MAXIMAL_RESULTS", "3"))
