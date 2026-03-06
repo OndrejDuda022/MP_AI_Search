@@ -17,6 +17,8 @@ setup(
         "selenium>=4.0.0",
         "webdriver-manager>=3.5.0",
         "pdfplumber>=0.5.0",
+        "chromadb>=0.4.0",
+        "sentence-transformers>=2.2.0",
     ],
     extras_require={
         "dev": [

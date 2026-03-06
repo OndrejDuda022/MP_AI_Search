@@ -1,15 +1,15 @@
 #load necessary libraries
 import os
 import sys
-import subprocess
 from dotenv import load_dotenv
 
 #prepare environment
 load_dotenv()
 sys.path.insert(0, os.getenv("PYTHONPATH"))
 from page_search import search_google, fetch_page_text
-from src.ai_processing import process_with_ai, generate_search_queries, generate_local_db_queries
-from src.local_db import search_local_db, filter_relevant, get_db_stats
+from ai_processing import process_with_ai, generate_search_queries, generate_local_db_queries
+from local_db import search_local_db, filter_relevant, get_db_stats
+from docker_manager import ensure_selenium_container
 
 #main function
 def main():
@@ -36,7 +36,7 @@ def main():
     internal_mode = os.getenv("INTERNAL_MODE", "True").lower() == "true"
     minimal_sources = int(os.getenv("MINIMAL_SOURCES", "3"))
     maximal_sources = int(os.getenv("MAXIMAL_SOURCES", "5"))
-    min_relevance = float(os.getenv("MIN_RELEVANCE", "0.6"))
+    min_relevance = float(os.getenv("MIN_RELEVANCE", "0.45"))
     
     contents = []
     
@@ -91,13 +91,16 @@ def main():
         #check Selenium container
         selenium_required = os.getenv("CONTAIN_SELENIUM", "False").lower() == "true"
         allow_fallback = os.getenv("ALLOW_LOCAL_SELENIUM", "False").lower() == "true"
-        
+
+        selenium_available = False
         can_proceed = True
         if selenium_required:
             if ensure_selenium_container():
                 print("[+] Selenium container ready")
+                selenium_available = True
             elif allow_fallback:
                 print("[*] Selenium container failed. Falling back to local ChromeDriver...")
+                selenium_available = True  # local ChromeDriver still usable
             else:
                 print("[!] Selenium container failed and fallback is not allowed.")
                 if len(contents) == 0:
@@ -105,6 +108,9 @@ def main():
                     return
                 print("[*] Continuing with local results only.")
                 can_proceed = False
+        else:
+            # Selenium not required — local ChromeDriver is always usable as fallback
+            selenium_available = True
         
         if not can_proceed:
             #skip web search, proceed with local results only
@@ -124,9 +130,9 @@ def main():
                 #fetch page contents
                 use_selenium = os.getenv("FORCE_SELENIUM", "False").lower() == "true"
                 extract_mode = os.getenv("EXTRACT_MODE", "text").lower()
-                
+
                 for url in urls:
-                    content = fetch_page_text(url, use_selenium, extract_mode)
+                    content = fetch_page_text(url, use_selenium, extract_mode, selenium_available)
                     if content:
                         contents.append(content)
     
@@ -191,55 +197,6 @@ def display_raw_results(contents, query):
     print("\n" + "="*60)
     print(f"Total Results: {len(contents)}")
     print("="*60)
-
-#check and start Selenium container if needed
-def ensure_selenium_container():
-    print("[*] Checking Selenium container...")
-    
-    try:
-        #check if Docker is available
-        result = subprocess.run(["docker", "ps"], capture_output=True, text=True, timeout=5)
-        if result.returncode != 0:
-            print("[!] Docker is not running. Please start Docker Desktop.")
-            return False
-        
-        #check if selenium-chrome container is running
-        result = subprocess.run(
-            ["docker", "ps", "--filter", "name=selenium-chrome", "--format", "{{.Names}}"],
-            capture_output=True, text=True, timeout=5
-        )
-        
-        if "selenium-chrome" in result.stdout:
-            print("[+] Selenium container is already running")
-            return True
-        
-        #try to start the container
-        print("[*] Starting Selenium container...")
-        if sys.platform == "win32":
-            #use PowerShell script on Windows
-            script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src/scripts/start_selenium.ps1")
-            if os.path.exists(script_path):
-                print(f"[*] Executing script: {script_path}")
-                result = subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", script_path], capture_output=True, text=True, timeout=30)
-                if result.returncode == 0:
-                    print("[+] Selenium container started successfully")
-                    return True
-                else:
-                    print(f"[!] Failed to start container: {result.stderr}")
-                    return False
-        
-        print("[!] Please run './start_selenium.ps1' manually or check Docker setup")
-        return False
-        
-    except FileNotFoundError:
-        print("[!] Docker is not installed. Please install Docker or use local ChromeDriver")
-        return False
-    except subprocess.TimeoutExpired:
-        print("[!] Docker command timed out")
-        return False
-    except Exception as e:
-        print(f"[!] Error checking Selenium: {e}")
-        return False
 
 #execute main function
 if __name__ == "__main__":

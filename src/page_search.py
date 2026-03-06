@@ -50,21 +50,23 @@ def search_google(queries, max=3, disregard_files=False):
 #main function to fetch page text with fallback
 #parameters: url (str) - target URL, use_selenium (bool) - whether to force Selenium, extract_mode (str) - 'text' or 'html'
 #returns: Optional[Dict] - dictionary with page info or None if failed
-def fetch_page_text(url: str, use_selenium: bool = False, extract_mode: str = 'text') -> Optional[Dict]:
+def fetch_page_text(url: str, use_selenium: bool = False, extract_mode: str = 'text', selenium_available: bool = True) -> Optional[Dict]:
     result = None
     is_pdf = False
-    
+
     if not use_selenium:
         print(f"[1/2] Trying requests for {url}...")
         result, is_pdf = fetch_with_requests(url)
-    
-    # Fallback to Selenium if we don't have any result
-    if result is None or result == "":
+
+    # Fallback to Selenium only if it is actually available
+    if (result is None or result == "") and selenium_available:
         print(f"[2/2] Falling back to Selenium for {url}...")
         html = fetch_with_selenium(url)
         if html:
             result = html
             is_pdf = False  # Selenium returns HTML, not PDF
+    elif (result is None or result == "") and not selenium_available:
+        print(f"[!] Selenium unavailable, skipping fallback for {url}")
     
     if result:
         if is_pdf:
