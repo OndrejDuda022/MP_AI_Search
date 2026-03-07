@@ -90,10 +90,22 @@ try {
 if ($dockerAvailable) {
     $answer = Read-Host "Docker is available. Start the Selenium container now? [y/N]"
     if ($answer -match "^[Yy]$") {
-        & (Join-Path $ProjectRoot "src\scripts\start_selenium.ps1")
-        Write-Host "Add SELENIUM_REMOTE_URL=http://localhost:4444/wd/hub to your .env" -ForegroundColor Yellow
+        $PythonExe = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+        & $PythonExe -c @"
+import sys, os
+sys.path.insert(0, r'$ProjectRoot\src')
+from docker_manager import ensure_selenium_container
+ok = ensure_selenium_container()
+sys.exit(0 if ok else 1)
+"@
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[+] Selenium container is ready." -ForegroundColor Green
+            Write-Host "Add SELENIUM_REMOTE_URL=http://localhost:4444/wd/hub to your .env" -ForegroundColor Yellow
+        } else {
+            Write-Host "[!] Selenium container could not be started. Check Docker and try again." -ForegroundColor Red
+        }
     } else {
-        Write-Host "Skipped. Run .\src\scripts\start_selenium.ps1 later if needed." -ForegroundColor Yellow
+        Write-Host "Skipped. You can start Selenium later via docker_manager.ensure_selenium_container()." -ForegroundColor Yellow
     }
 } else {
     Write-Host "Docker not detected — Selenium will use local ChromeDriver (webdriver-manager)." -ForegroundColor Yellow
