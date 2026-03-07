@@ -8,7 +8,7 @@ sys.path.insert(0, os.getenv("PYTHONPATH"))
 
 from src.page_search import search_google, fetch_page_text
 
-#test google search
+# Test google search
 def test_google_search():
     query = "prumyslovka liberec sídlo"
 
@@ -20,7 +20,7 @@ def test_google_search():
 
     print(f"Results saved to {output_file}")
 
-#test google search and fetch page contents
+# Test google search and fetch page contents
 def test_google_search_with_content():
     queries = ["as4u služby", "as4u kontakt", "as4u careers"]
 
@@ -38,21 +38,21 @@ def test_google_search_with_content():
 
     print(f"Results with content saved to {output_file}")
 
-#test fetching a single page
+# Test fetching a single page
 def test_page_scrape():
     print("\n=== Testing Page Scrape ===")
 
     url = "https://www.alza.cz/EN/"
 
-    content = fetch_page_text(url)
+    result = fetch_page_text(url)
 
     output_file = "debug/test_page_content.txt"
     with open(output_file, "w", encoding="utf-8") as f:
-        f.write(content)
+        f.write(result.get("content", "") if result else "")
 
     print(f"Page content saved to {output_file}")
 
-#URLs that might require Selenium
+# URLs that might require Selenium
 def test_selenium_fallback():
     print("\n=== Testing Selenium Fallback ===")
     
@@ -64,25 +64,27 @@ def test_selenium_fallback():
     
     for url in test_urls:
         print(f"\nTesting: {url}")
-        content = fetch_page_text(url)
+        result = fetch_page_text(url)
         
-        if content:
+        if result:
+            content = result.get("content", "")
             print(f"Success! Extracted {len(content)} characters")
             preview = content[:150] + "..." if len(content) > 150 else content
             print(f"Preview: {preview}")
         else:
             print(f"Failed to fetch {url}")
 
-#always use Selenium
+# Always use Selenium
 def test_force_selenium():
     print("\n=== Testing Force Selenium Mode ===")
     
     url = "https://openai.com/"
     print(f"Testing: {url} (forcing Selenium)")
     
-    content = fetch_page_text(url, use_selenium=True)
+    result = fetch_page_text(url, use_selenium=True)
     
-    if content:
+    if result:
+        content = result.get("content", "")
         print(f"Success! Extracted {len(content)} characters")
         preview = content[:100]
         print(f"First 100 characters: {preview}")
@@ -91,7 +93,7 @@ def test_force_selenium():
 
 if __name__ == "__main__":
     test_google_search()
-    #test_google_search_with_content()
-    #test_page_scrape()
-    #test_selenium_fallback()
-    #test_force_selenium()
+    # Test_google_search_with_content()
+    # Test_page_scrape()
+    # Test_selenium_fallback()
+    # Test_force_selenium()

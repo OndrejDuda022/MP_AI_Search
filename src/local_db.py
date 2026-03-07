@@ -1,4 +1,5 @@
 import os
+import hashlib
 import chromadb
 from chromadb import EmbeddingFunction, Documents, Embeddings
 from chromadb.config import Settings
@@ -12,9 +13,9 @@ _model = None  # cached globally to avoid reloading
 MODEL_NAME = "paraphrase-multilingual-mpnet-base-v2"
 
 
-#local embedding function
-#parameters: input (Documents) - list of document texts to embed
-#returns: Embeddings - list of embedding vectors corresponding to the input documents
+# Local embedding function
+# Parameters: input (Documents) - list of document texts to embed
+# Returns: Embeddings - list of embedding vectors corresponding to the input documents
 class _LocalEmbeddingFunction(EmbeddingFunction[Documents]):
     model_name = MODEL_NAME
 
@@ -32,9 +33,9 @@ class _LocalEmbeddingFunction(EmbeddingFunction[Documents]):
         return embeddings.tolist()
 
 
-#get or create the ChromaDB client
-#parameters: none
-#returns: ChromaDB client instance
+# Get or create the ChromaDB client
+# Parameters: none
+# Returns: ChromaDB client instance
 def get_db_client():
     global _client
     if _client is None:
@@ -46,7 +47,7 @@ def get_db_client():
     return _client
 
 
-#get the local embedding function (singleton)
+# Get the local embedding function (singleton)
 def get_embedding_function():
     global _embedding_function
     if _embedding_function is None:
@@ -63,9 +64,9 @@ def get_embedding_function():
     return _embedding_function
 
 
-#get or create the collection
-#parameters: name (str) - name of the collection
-#returns: ChromaDB collection instance
+# Get or create the collection
+# Parameters: name (str) - name of the collection
+# Returns: ChromaDB collection instance
 def get_collection(name: str = "knowledge_base"):
     global _collection
     if _collection is None:
@@ -79,9 +80,9 @@ def get_collection(name: str = "knowledge_base"):
         print(f"[*] Using collection '{name}' with local embedding model.")
     return _collection
 
-#search the local database
-#parameters: queries (List[str]) - list of query strings, n_results (int) - number of results to return per query
-#returns: List[Dict] - list of search results
+# Search the local database
+# Parameters: queries (List[str]) - list of query strings, n_results (int) - number of results to return per query
+# Returns: List[Dict] - list of search results
 def search_local_db(queries: List[str], n_results: int = 5) -> List[Dict]:
     try:
         collection = get_collection()
@@ -122,9 +123,9 @@ def search_local_db(queries: List[str], n_results: int = 5) -> List[Dict]:
         print(f"[!] Error searching local database: {e}")
         return []
 
-#filter results based on cosine similarity threshold
-#parameters: results (List[Dict]) - list of search results, min_relevance (float) - minimum cosine similarity (0-1, higher = stricter)
-#returns: List[Dict] - list of relevant results only
+# Filter results based on cosine similarity threshold
+# Parameters: results (List[Dict]) - list of search results, min_relevance (float) - minimum cosine similarity (0-1, higher = stricter)
+# Returns: List[Dict] - list of relevant results only
 def filter_relevant(results: List[Dict], min_relevance: float) -> List[Dict]:
     if not results:
         return []
@@ -143,14 +144,13 @@ def filter_relevant(results: List[Dict], min_relevance: float) -> List[Dict]:
     
     return relevant_results
 
-#add or update a document in the local database
-#parameters: content (str) - document content, metadata (Optional[Dict]) - document metadata, doc_id (Optional[str]) - document ID
-#returns: none
+# Add or update a document in the local database
+# Parameters: content (str) - document content, metadata (Optional[Dict]) - document metadata, doc_id (Optional[str]) - document ID
+# Returns: none
 def add_document(content: str, metadata: Optional[Dict] = None, doc_id: Optional[str] = None):
     collection = get_collection()
     
     if doc_id is None:
-        import hashlib
         doc_id = hashlib.md5(content.encode()).hexdigest()
     
     collection.upsert(
@@ -161,9 +161,9 @@ def add_document(content: str, metadata: Optional[Dict] = None, doc_id: Optional
     
     print(f"[*] Document added/updated in local database: {doc_id}")
 
-#retrieve database statistics
-#parameters: none
-#returns: Dict - database statistics
+# Retrieve database statistics
+# Parameters: none
+# Returns: Dict - database statistics
 def get_db_stats() -> Dict:
     try:
         collection = get_collection()

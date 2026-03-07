@@ -7,7 +7,7 @@ load_dotenv()
 sys.path.insert(0, os.getenv("PYTHONPATH"))
 from src.ai_processing import process_with_ai, generate_search_queries
 
-#test processing data with AI
+# Test processing data with AI
 def test_process_with_ai():
     input_file = "debug/test_google_results_with_content.json"
     with open(input_file, "r", encoding="utf-8") as f:
@@ -32,20 +32,20 @@ def test_process_with_ai():
         print(f"  - {source}")
     print(f"Confidence: {response.confidence}")
     
-    #save to json file
+    # Save to json file
     output_file = "debug/test_ai_response_structured.json"
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(response.model_dump(), f, ensure_ascii=False, indent=4)
         print(f"\nStructured response saved to {output_file}")
 
-#test generating search queries with AI
+# Test generating search queries with AI
 def test_generate_search_queries():
     user_input = "Kde leží Liberec?"
     queries = generate_search_queries(user_input)
     if queries:
         print("Generated Search Queries:", queries)
         
-        #save to json file
+        # Save to json file
         output_file = "debug/test_generated_search_queries.json"
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump({"queries": queries}, f, ensure_ascii=False, indent=4)
@@ -54,6 +54,6 @@ def test_generate_search_queries():
         print("The input was deemed inappropriate.")
 
 if __name__ == "__main__":
-    #test_generate_search_queries()
+    # Test_generate_search_queries()
     test_process_with_ai()
     

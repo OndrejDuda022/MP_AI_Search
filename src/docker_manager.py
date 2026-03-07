@@ -8,6 +8,9 @@ PORT = "4444"
 SELENIUM_URL = f"http://localhost:{PORT}/wd/hub"
 
 
+# Check whether the current process is running inside a Docker container
+# Parameters: none
+# Returns: bool - True if running inside a container, False otherwise
 def is_running_in_container() -> bool:
     if os.path.exists("/.dockerenv"):
         return True
@@ -21,11 +24,17 @@ def is_running_in_container() -> bool:
     return False
 
 
+# Read the remote Selenium URL from environment, if configured
+# Parameters: none
+# Returns: Optional[str] - URL string or None if not set
 def _remote_url() -> Optional[str]:
     url = os.getenv("SELENIUM_REMOTE_URL", "").strip()
     return url if url else None
 
 
+# Verify that a remote Selenium server is reachable and responding
+# Parameters: remote_url (str) - base URL of the remote Selenium hub
+# Returns: bool - True if the server returns HTTP 200, False otherwise
 def _check_remote_selenium(remote_url: str) -> bool:
     import requests
     try:
@@ -36,6 +45,9 @@ def _check_remote_selenium(remote_url: str) -> bool:
         return False
 
 
+# Poll the local Selenium container until it is ready or timeout is reached
+# Parameters: max_wait (int) - maximum seconds to wait
+# Returns: bool - True if Selenium became ready in time, False on timeout
 def _wait_for_selenium(max_wait: int = 30) -> bool:
     import requests
     start = time.time()
@@ -51,6 +63,10 @@ def _wait_for_selenium(max_wait: int = 30) -> bool:
     return False
 
 
+# Ensure the Selenium container (local Docker or remote) is running and ready
+# Starts or creates the container when necessary and sets SELENIUM_REMOTE_URL
+# Parameters: none
+# Returns: bool - True if Selenium is available, False if it could not be started
 def ensure_selenium_container() -> bool:
     os.environ.pop("SELENIUM_REMOTE_URL", None)
 
@@ -131,6 +147,9 @@ def ensure_selenium_container() -> bool:
     return False
 
 
+# Stop the local Selenium Docker container gracefully
+# Parameters: none
+# Returns: bool - True if stopped successfully or already stopped, False on error
 def stop_selenium_container() -> bool:
     try:
         import docker

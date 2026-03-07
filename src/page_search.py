@@ -1,6 +1,5 @@
 import os
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
 from dotenv import load_dotenv
 import requests
 from bs4 import BeautifulSoup
@@ -11,9 +10,9 @@ import pdfplumber
 
 load_dotenv()
 
-#function to search google using Custom Search API
-#parameters: queries (List[str]) - list of search queries, max (int) - max results per query, disregard_files (bool) - whether to skip file links
-#returns: List[str] - list of URLs
+# Function to search google using Custom Search API
+# Parameters: queries (List[str]) - list of search queries, max (int) - max results per query, disregard_files (bool) - whether to skip file links
+# Returns: List[str] - list of URLs
 def search_google(queries, max=3, disregard_files=False):
     api_key = os.getenv("GOOGLE_API_KEY")
     search_engine_id = os.getenv("SEARCH_ENGINE_ID")
@@ -33,7 +32,7 @@ def search_google(queries, max=3, disregard_files=False):
             url = item["link"]
             
             if disregard_files:
-                #skip those weird pdfs that pop up from who knows where
+                # Skip those weird pdfs that pop up from who knows where
                 url_lower = url.lower()
                 if 'file.php' in url_lower or '.pdf' in url_lower or '.doc' in url_lower or '.docx' in url_lower:
                     print(f"[*] Skipping file URL: {url}")
@@ -47,9 +46,9 @@ def search_google(queries, max=3, disregard_files=False):
 
     return all_urls
 
-#main function to fetch page text with fallback
-#parameters: url (str) - target URL, use_selenium (bool) - whether to force Selenium, extract_mode (str) - 'text' or 'html'
-#returns: Optional[Dict] - dictionary with page info or None if failed
+# Main function to fetch page text with fallback
+# Parameters: url (str) - target URL, use_selenium (bool) - whether to force Selenium, extract_mode (str) - 'text' or 'html'
+# Returns: Optional[Dict] - dictionary with page info or None if failed
 def fetch_page_text(url: str, use_selenium: bool = False, extract_mode: str = 'text', selenium_available: bool = True) -> Optional[Dict]:
     result = None
     is_pdf = False
@@ -100,9 +99,9 @@ def fetch_page_text(url: str, use_selenium: bool = False, extract_mode: str = 't
     print(f"[-] All methods failed for {url}")
     return None
 
-#1st attempt: fetch page using requests
-#parameters: url (str) - target URL, timeout (int) - request timeout, max_size_mb (int) - max content size in MB
-#returns: Optional[tuple[str, bool]] - tuple of (content string, is_pdf flag) or (None, False) if failed
+# 1st attempt: fetch page using requests
+# Parameters: url (str) - target URL, timeout (int) - request timeout, max_size_mb (int) - max content size in MB
+# Returns: Optional[tuple[str, bool]] - tuple of (content string, is_pdf flag) or (None, False) if failed
 def fetch_with_requests(url: str, timeout: int = 10, max_size_mb: int = int(os.getenv("MAX_PAGE_SIZE", 10))) -> Optional[tuple[str, bool]]:
     try:
         headers = {
@@ -136,7 +135,7 @@ def fetch_with_requests(url: str, timeout: int = 10, max_size_mb: int = int(os.g
                 print(f"[!] Content exceeded {max_size_mb}MB, truncating")
                 break
         
-        #check if PDF
+        # Check if PDF
         if content[:4] == b'%PDF' or response.headers.get('Content-Type', '').lower().startswith('application/pdf'):
             print(f"[*] PDF detected: {url}")
             text = extract_text_from_pdf(content)
@@ -146,7 +145,7 @@ def fetch_with_requests(url: str, timeout: int = 10, max_size_mb: int = int(os.g
                 print(f"[!] PDF text extraction failed, will try Selenium fallback")
                 return (None, False)
 
-        #HTML content
+        # HTML content
         try:
             text = content.decode('utf-8')
         except UnicodeDecodeError:
@@ -162,9 +161,9 @@ def fetch_with_requests(url: str, timeout: int = 10, max_size_mb: int = int(os.g
         print(f"[!] Requests failed for {url}: {e}")
         return (None, False)
 
-#2nd attempt: fallback to fetch page using Selenium
-#parameters: url (str) - target URL, timeout (int) - page load timeout, max_size_mb (int) - max HTML size in MB
-#returns: Optional[str] - page HTML content or None if failed
+# 2nd attempt: fallback to fetch page using Selenium
+# Parameters: url (str) - target URL, timeout (int) - page load timeout, max_size_mb (int) - max HTML size in MB
+# Returns: Optional[str] - page HTML content or None if failed
 def fetch_with_selenium(url: str, timeout: int = 15, max_size_mb: int = int(os.getenv("MAX_PAGE_SIZE", 10))) -> Optional[str]:
     try:
         from selenium import webdriver
@@ -173,7 +172,7 @@ def fetch_with_selenium(url: str, timeout: int = 15, max_size_mb: int = int(os.g
         from selenium.webdriver.support.ui import WebDriverWait
         from selenium.webdriver.support import expected_conditions as EC
         
-        #check for PDF URLs before loading (save resources)
+        # Check for PDF URLs before loading (save resources)
         url_lower = url.lower()
         if url_lower.endswith('.pdf') or '.pdf?' in url_lower or 'file.php' in url_lower:
             print(f"[!] Selenium cannot extract text from PDF files: {url}")
@@ -208,12 +207,12 @@ def fetch_with_selenium(url: str, timeout: int = 15, max_size_mb: int = int(os.g
                 EC.presence_of_element_located((By.TAG_NAME, "body"))
             )
             
-            #javascript execution delay
+            # Javascript execution delay
             time.sleep(2)
             
             html = driver.page_source
             
-            #check HTML size after fetching (protection against huge pages)
+            # Check HTML size after fetching (protection against huge pages)
             size_mb = len(html.encode('utf-8')) / (1024 * 1024)
             if size_mb > max_size_mb:
                 print(f"[!] HTML too large: {size_mb:.1f}MB (max {max_size_mb}MB)")
@@ -226,7 +225,7 @@ def fetch_with_selenium(url: str, timeout: int = 15, max_size_mb: int = int(os.g
         finally:
             driver.quit()
 
-    #don't forget to install chromedriver      
+    # Don't forget to install chromedriver      
     except ImportError:
         print(f"[!] Selenium not installed.")
         print(f"[!] Skipping Selenium fallback for {url}")
@@ -235,30 +234,30 @@ def fetch_with_selenium(url: str, timeout: int = 15, max_size_mb: int = int(os.g
         print(f"[!] Selenium failed for {url}: {e}")
         return None
 
-#extract title from HTML or text
-#parameters: soup (BeautifulSoup) - parsed HTML, text (str) - raw text content
-#returns: str - extracted title or fallback title
+# Extract title from HTML or text
+# Parameters: soup (BeautifulSoup) - parsed HTML, text (str) - raw text content
+# Returns: str - extracted title or fallback title
 def extract_title(soup: BeautifulSoup = None, text: str = None) -> str:
     if soup:
         title_tag = soup.find('title')
         if title_tag:
             return title_tag.get_text().strip()
         
-        #try to get h1 as fallback
+        # Try to get h1 as fallback
         h1_tag = soup.find('h1')
         if h1_tag:
             return h1_tag.get_text().strip()
     
-    #for PDF or if no title found, try to extract from first line
+    # For PDF or if no title found, try to extract from first line
     if text:
         first_line = text.split('\n')[0].strip() if '\n' in text else text[:100].strip()
         return first_line if len(first_line) < 150 else first_line[:150] + "..."
     
     return "Untitled"
 
-#get text content from HTML
-#parameters: html (str) - raw HTML content, mode (str) - extraction mode ('text' or 'html'), max_size_mb (int) - max size in MB
-#returns: tuple[str, str] - extracted content and title
+# Get text content from HTML
+# Parameters: html (str) - raw HTML content, mode (str) - extraction mode ('text' or 'html'), max_size_mb (int) - max size in MB
+# Returns: tuple[str, str] - extracted content and title
 def extract_text_from_html(html: str, mode: str = 'text', max_size_mb: int = 5) -> tuple[str, str]:
     try:
         # Check HTML size limit
@@ -282,18 +281,18 @@ def extract_text_from_html(html: str, mode: str = 'text', max_size_mb: int = 5) 
         main_content = soup
     
     if mode == 'html':
-        #clean HTML mode: preserve structure, remove attributes
+        # Clean HTML mode: preserve structure, remove attributes
         content = clean_html(main_content)
         return content, title
     else:
-        #text mode: extract plain text
+        # Text mode: extract plain text
         text = main_content.get_text(separator=' ', strip=True)
         text = ' '.join(text.split())
         return text, title
 
-#clean HTML while preserving semantic structure
-#parameters: element (Tag) - BeautifulSoup Tag element
-#returns: str - cleaned HTML string
+# Clean HTML while preserving semantic structure
+# Parameters: element (Tag) - BeautifulSoup Tag element
+# Returns: str - cleaned HTML string
 def clean_html(element) -> str:
 
     allowed_tags = {'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 
@@ -304,9 +303,9 @@ def clean_html(element) -> str:
     
     for tag in clean.find_all():
         if tag.name not in allowed_tags:
-            tag.unwrap()  #keep content but remove tag
+            tag.unwrap()  # Keep content but remove tag
     
-    #remove all attributes except href for links
+    # Remove all attributes except href for links
     for tag in clean.find_all():
         if tag.name == 'a' and tag.get('href'):
             attrs = {'href': tag['href']}
@@ -323,23 +322,9 @@ def clean_html(element) -> str:
     
     return html_str.strip()
 
-#check if response is PDF
-#parameters: response (requests.Response) - HTTP response object
-#returns: bool - True if PDF, False otherwise
-def is_pdf_content(response: requests.Response) -> bool:
-    content_type = response.headers.get('Content-Type', '').lower()
-    
-    if 'application/pdf' in content_type:
-        return True
-    
-    if response.content[:4] == b'%PDF':
-        return True
-    
-    return False
-
-#extract text from PDF content
-#parameters: pdf_content (bytes) - raw PDF content, max_pages (int) - max pages to extract, max_size_mb (int) - max size in MB
-#returns: Optional[str] - extracted text or None if failed
+# Extract text from PDF content
+# Parameters: pdf_content (bytes) - raw PDF content, max_pages (int) - max pages to extract, max_size_mb (int) - max size in MB
+# Returns: Optional[str] - extracted text or None if failed
 def extract_text_from_pdf(pdf_content: bytes, max_pages: int = 50, max_size_mb: int = 10) -> Optional[str]:
     try:
         # Check file size limit

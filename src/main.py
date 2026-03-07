@@ -1,9 +1,9 @@
-#load necessary libraries
+# Load necessary libraries
 import os
 import sys
 from dotenv import load_dotenv
 
-#prepare environment
+# Prepare environment
 load_dotenv()
 sys.path.insert(0, os.getenv("PYTHONPATH"))
 from page_search import search_google, fetch_page_text
@@ -11,26 +11,27 @@ from ai_processing import process_with_ai, generate_search_queries, generate_loc
 from local_db import search_local_db, filter_relevant, get_db_stats
 from docker_manager import ensure_selenium_container
 
-#main function
+# Main function
 def main():
     query = input("[*] Enter your search query: ").strip()
     
-    #basic input validation
+    # Basic input validation
+    max_query_length = int(os.getenv("MAX_USER_QUERY_LENGTH", 300))
     if not query:
         print("[!] Empty query. Process terminated.")
         return
-    
-    if len(query) > int(os.getenv("MAX_USER_QUERY_LENGTH", 300)):
-        print(f"[!] Query too long (max {os.getenv('MAX_USER_QUERY_LENGTH', 300)} characters). Process terminated.")
+
+    if len(query) > max_query_length:
+        print(f"[!] Query too long (max {max_query_length} characters). Process terminated.")
         return
 
-    #load configuration from .env
-    #Default settings:
-        #Use local DB: True
-        #Search mode: hybrid
-        #Internal mode: True - for safety
-        #Minimal sources: 3
-        #Minimal relevance: 0.6
+    # Load configuration from .env
+    # Default settings:
+        # Use local DB: True
+        # Search mode: hybrid
+        # Internal mode: True - for safety
+        # Minimal sources: 3
+        # Minimal relevance: 0.6
     use_local_db = os.getenv("USE_LOCAL_DB", "True").lower() == "true"
     search_mode = os.getenv("SEARCH_MODE", "hybrid").lower()  # hybrid/local/web
     internal_mode = os.getenv("INTERNAL_MODE", "True").lower() == "true"
@@ -40,16 +41,16 @@ def main():
     
     contents = []
     
-    #try local database first
+    # Try local database first
     if use_local_db and search_mode in ["hybrid", "local"]:
         print("[*] Searching local database...")
         
-        #show DB stats
+        # Show DB stats
         stats = get_db_stats()
         print(f"[*] Local database: {stats.get('count', 0)} documents")
         
         if stats.get('count', 0) > 0:
-            #generate queries optimized for vector DB (semantic search)
+            # Generate queries optimized for vector DB (semantic search)
             local_queries = generate_local_db_queries(query, language=os.getenv("LANGUAGE", "auto"))
             if not local_queries:
                 print("[!] Could not generate local DB queries")
@@ -57,17 +58,17 @@ def main():
                 print(f"[*] Local DB queries: {local_queries}")
                 local_results = search_local_db(local_queries, n_results=maximal_sources)
                 
-                #filter out irrelevant results
+                # Filter out irrelevant results
                 relevant_results = filter_relevant(local_results, min_relevance)
                 
                 if relevant_results:
                     print(f"[*] Found {len(relevant_results)} relevant local results (filtered from {len(local_results)} total)")
                     contents.extend(relevant_results)
                     
-                    #if local-only mode, skip web
+                    # If local-only mode, skip web
                     if search_mode == "local":
                         print("[*] Local-only mode, skipping web search")
-                    #if hybrid and enough good results, skip web
+                    # If hybrid and enough good results, skip web
                     elif len(relevant_results) >= minimal_sources:
                         print("[*] Sufficient local results, skipping web search")
                     else:
@@ -77,18 +78,18 @@ def main():
         else:
             print("[!] Local database is empty")
     
-    #web search
+    # Web search
     if search_mode in ["hybrid", "web"] and len(contents) < minimal_sources:
         print("[*] Preparing web search...")
         
-        #generate search queries for Google
-        search_queries = generate_search_queries(query, language=os.getenv("LANGUAGE", "auto"), max_input_length=int(os.getenv("MAX_USER_QUERY_LENGTH", 300)))
+        # Generate search queries for Google
+        search_queries = generate_search_queries(query, language=os.getenv("LANGUAGE", "auto"), max_input_length=max_query_length)
         if not search_queries:
             print("[!] The input query was deemed inappropriate. Process terminated.")
             return
         print(f"[*] Web search queries: {search_queries}")
         
-        #check Selenium container
+        # Check Selenium container
         selenium_required = os.getenv("CONTAIN_SELENIUM", "False").lower() == "true"
         allow_fallback = os.getenv("ALLOW_LOCAL_SELENIUM", "False").lower() == "true"
 
@@ -113,7 +114,7 @@ def main():
             selenium_available = True
         
         if not can_proceed:
-            #skip web search, proceed with local results only
+            # Skip web search, proceed with local results only
             pass
         else:
             max_results = int(os.getenv("MAXIMAL_RESULTS", "3"))
@@ -123,11 +124,11 @@ def main():
                     print("[!] No results found (neither local nor web). Process terminated.")
                     return
             else:
-                #remove duplicate URLs
+                # Remove duplicate URLs
                 urls = list(dict.fromkeys(urls))
                 print(f"[*] Fetched URLs: {len(urls)}")
                 
-                #fetch page contents
+                # Fetch page contents
                 use_selenium = os.getenv("FORCE_SELENIUM", "False").lower() == "true"
                 extract_mode = os.getenv("EXTRACT_MODE", "text").lower()
 
@@ -136,27 +137,27 @@ def main():
                     if content:
                         contents.append(content)
     
-    #check if we have any results
+    # Check if we have any results
     if not contents:
         print("[!] No content found. Process terminated.")
         return
     
-    #display source preview
+    # Display source preview
     print(f"\n[*] Total sources found: {len(contents)}")
     for i, source in enumerate(contents, 1):
         print(f"  {i}. [{source.get('type', 'N/A')}] {source.get('title', 'N/A')}")
     
-    #process results
+    # Process results
     if search_mode in ["local", "hybrid"] and internal_mode:
-        #internal mode - display raw results without AI processing
+        # Internal mode - display raw results without AI processing
         print("\n[*] Internal mode - displaying raw results (no AI processing)")
         display_raw_results(contents, query)
     else:
-        #normal mode - AI processing
+        # Normal mode - AI processing
         response = process_with_ai(contents, query, language=os.getenv("LANGUAGE", "auto"))
         pretty_output(response)
 
-#function to pretty print AI response
+# Function to pretty print AI response
 def pretty_output(response):
     print("\n" + "="*60)
     print("AI RESPONSE")
@@ -176,7 +177,7 @@ def pretty_output(response):
     print(f"\n[Confidence: {response.confidence}]")
     print("="*60)
 
-#function to display raw results (internal mode)
+# Function to display raw results (internal mode)
 def display_raw_results(contents, query):
     print("\n" + "="*60)
     print(f"RAW SEARCH RESULTS FOR: {query}")
@@ -198,6 +199,6 @@ def display_raw_results(contents, query):
     print(f"Total Results: {len(contents)}")
     print("="*60)
 
-#execute main function
+# Execute main function
 if __name__ == "__main__":
     main()

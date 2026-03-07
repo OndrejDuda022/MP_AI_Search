@@ -8,7 +8,7 @@ from typing import List, Dict
 
 load_dotenv()
 
-#structured output models
+# Structured output models
 class SearchQueries(BaseModel):
     queries: List[str]
     is_appropriate: bool
@@ -20,9 +20,9 @@ class AIResponse(BaseModel):
     sources_used: List[str]
     confidence: str
 
-#generate search queries based on user input
-#parameters: user_input (str) - raw user question, language (str) - desired language for queries, max_input_length (int) - max length of user input
-#returns: List[str] - list of generated search queries
+# Generate search queries based on user input
+# Parameters: user_input (str) - raw user question, language (str) - desired language for queries, max_input_length (int) - max length of user input
+# Returns: List[str] - list of generated search queries
 def generate_search_queries(user_input, language="auto", max_input_length=500) -> List[str]:
     api_key = os.getenv("AI_API_KEY")
     if not api_key:
@@ -33,7 +33,7 @@ def generate_search_queries(user_input, language="auto", max_input_length=500) -
     if not company or not url:
         raise ValueError("[!] Missing TARGET DOMAIN or AI URL in environment variables. Cannot generate search queries.")
     
-    #sanitize and limit user input
+    # Sanitize and limit user input
     user_input = sanitize_user_input(user_input)
     user_input = user_input[:max_input_length]
 
@@ -159,9 +159,9 @@ def generate_search_queries(user_input, language="auto", max_input_length=500) -
     
     return parsed_result.queries
 
-#generate queries optimized for local vector database search
-#parameters: user_input (str) - user question, language (str) - language preference, max_input_length (int) - max input length
-#returns: List[str] - list of keyword-based queries for semantic search
+# Generate queries optimized for local vector database search
+# Parameters: user_input (str) - user question, language (str) - language preference, max_input_length (int) - max input length
+# Returns: List[str] - list of keyword-based queries for semantic search
 def generate_local_db_queries(user_input, language="auto", max_input_length=500) -> List[str]:
     api_key = os.getenv("AI_API_KEY")
     if not api_key:
@@ -171,7 +171,7 @@ def generate_local_db_queries(user_input, language="auto", max_input_length=500)
     if not url:
         raise ValueError("[!] Missing AI URL in environment variables. Cannot generate search queries.")
     
-    #sanitize and limit user input
+    # Sanitize and limit user input
     user_input = sanitize_user_input(user_input)
     user_input = user_input[:max_input_length]
 
@@ -300,9 +300,9 @@ def generate_local_db_queries(user_input, language="auto", max_input_length=500)
         return None
     return parsed_result.queries
 
-#process data with AI to generate structured response
-#parameters: data (List[Dict]) - list of source data dictionaries, user_query (str) - user question, language (str) - desired language
-#returns: AIResponse - structured AI response
+# Process data with AI to generate structured response
+# Parameters: data (List[Dict]) - list of source data dictionaries, user_query (str) - user question, language (str) - desired language
+# Returns: AIResponse - structured AI response
 def process_with_ai(data, user_query="", language="auto"):
     api_key = os.getenv("AI_API_KEY")
 
@@ -314,7 +314,7 @@ def process_with_ai(data, user_query="", language="auto"):
     if not company or not url:
         raise ValueError("[!] Missing TARGET DOMAIN or AI URL in environment variables. Cannot request AI processing.")
 
-    #sanitize user query
+    # Sanitize user query
     user_query = sanitize_user_input(user_query)
 
     headers = {
@@ -424,9 +424,9 @@ def process_with_ai(data, user_query="", language="auto"):
     
     return parsed_result
 
-#format structured data for AI consumption
-#parameters: data_list (List[Dict]) - list of source data dictionaries
-#returns: str - formatted string representation of sources
+# Format structured data for AI consumption
+# Parameters: data_list (List[Dict]) - list of source data dictionaries
+# Returns: str - formatted string representation of sources
 def format_sources(data_list: List[Dict]) -> str:
     formatted_sources = []
     
@@ -448,40 +448,40 @@ def format_sources(data_list: List[Dict]) -> str:
     
     return "\n".join(formatted_sources)
 
-#sanitize user input
-#parameters: text (str) - raw user input
-#returns: str - sanitized user input
+# Sanitize user input
+# Parameters: text (str) - raw user input
+# Returns: str - sanitized user input
 def sanitize_user_input(text: str) -> str:
     if not text:
         return ""
     
-    #remove control characters
+    # Remove control characters
     text = re.sub(r'[\x00-\x08\x0b-\x0c\x0e-\x1f\x7f-\x9f]', '', text)
     
-    #remove common injection patterns
+    # Remove common injection patterns
     text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.IGNORECASE | re.DOTALL)
     text = re.sub(r'javascript:', '', text, flags=re.IGNORECASE)
     text = re.sub(r'on\w+\s*=', '', text, flags=re.IGNORECASE)
     
-    #normalize whitespace
+    # Normalize whitespace
     text = ' '.join(text.split())
     
     return text.strip()
 
-#sanitize scraped content
-#parameters: text (str) - raw scraped content
-#returns: str - sanitized content
+# Sanitize scraped content
+# Parameters: text (str) - raw scraped content
+# Returns: str - sanitized content
 def sanitize_scraped_content(text: str) -> str:
     if not text:
         return ""
     
     text = re.sub(r'[\x00-\x08\x0b-\x0c\x0e-\x1f\x7f-\x9f]', '', text)
     
-    #remove excessive whitespace
+    # Remove excessive whitespace
     text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)
     text = re.sub(r' +', ' ', text)
     
-    #remove common noise patterns
+    # Remove common noise patterns
     text = re.sub(r'(cookies?|gdpr|privacy policy)\s+(accept|consent|agree)', '', text, flags=re.IGNORECASE)
     
     return text.strip()
