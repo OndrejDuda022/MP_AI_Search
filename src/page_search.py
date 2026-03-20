@@ -167,8 +167,12 @@ def fetch_with_requests(url: str, timeout: int = 10, max_size_mb: int = int(os.g
 def _is_remote_selenium_available(remote_url: str) -> bool:
     try:
         import requests
-        # Check if Selenium server is responding
-        status_url = remote_url.replace('/wd/hub', '/status')
+        # Check if Selenium server is responding.
+        # Support both URL styles:
+        # - http://host:4444/wd/hub
+        # - http://host:4444
+        base = remote_url.rstrip("/")
+        status_url = base.replace('/wd/hub', '/status') if base.endswith('/wd/hub') else f"{base}/status"
         response = requests.get(status_url, timeout=2)
         return response.status_code == 200
     except:
@@ -212,11 +216,10 @@ def fetch_with_selenium(url: str, timeout: int = 15, max_size_mb: int = int(os.g
         in_container = is_running_in_container()
         remote_url = os.getenv("SELENIUM_REMOTE_URL", "").strip()
 
-        # Local ChromeDriver is only a valid fallback outside a container.
-        if in_container:
-            allow_local_fallback = False
-        else:
-            allow_local_fallback = os.getenv("ALLOW_LOCAL_SELENIUM", "True").lower() == "true"
+        # Local ChromeDriver is always allowed outside a container.
+        # This guarantees local execution still works even if
+        # SELENIUM_REMOTE_URL is configured but unreachable.
+        allow_local_fallback = not in_container
         
         driver = None
         

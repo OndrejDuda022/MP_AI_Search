@@ -40,7 +40,8 @@ def _check_remote_selenium(remote_url: str) -> bool:
     """Return True if the remote Selenium server is healthy."""
     import requests
     try:
-        status_url = remote_url.replace("/wd/hub", "/status")
+        base = remote_url.rstrip("/")
+        status_url = base.replace("/wd/hub", "/status") if base.endswith("/wd/hub") else f"{base}/status"
         response = requests.get(status_url, timeout=5)
         return response.status_code == 200
     except Exception:
