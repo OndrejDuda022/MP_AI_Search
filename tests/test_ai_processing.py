@@ -54,6 +54,6 @@ def test_generate_search_queries():
         print("The input was deemed inappropriate.")
 
 if __name__ == "__main__":
-    #test_generate_search_queries()
-    test_process_with_ai()
+    test_generate_search_queries()
+    #test_process_with_ai()
     
