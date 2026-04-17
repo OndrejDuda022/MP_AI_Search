@@ -6,11 +6,11 @@ from dotenv import load_dotenv
 load_dotenv()
 sys.path.insert(0, os.getenv("PYTHONPATH"))
 
-from src.page_search import search_google, fetch_page_text
+from page_search import search_google, fetch_page_text
 
 # Test google search
 def test_google_search():
-    query = "prumyslovka liberec sídlo"
+    query = "as4u sídlo"
 
     results = search_google([query], max=10)
 

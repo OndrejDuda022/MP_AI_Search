@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 sys.path.insert(0, os.getenv("PYTHONPATH"))
-from src.ai_processing import process_with_ai, generate_search_queries
+from ai_processing import process_with_ai, generate_search_queries
 
 # Test processing data with AI
 def test_process_with_ai():
@@ -40,7 +40,7 @@ def test_process_with_ai():
 
 # Test generating search queries with AI
 def test_generate_search_queries():
-    user_input = "Kde leží Liberec?"
+    user_input = "Jak se dělá jahodový koláč?"
     queries = generate_search_queries(user_input)
     if queries:
         print("Generated Search Queries:", queries)
@@ -54,6 +54,6 @@ def test_generate_search_queries():
         print("The input was deemed inappropriate.")
 
 if __name__ == "__main__":
-    # Test_generate_search_queries()
-    test_process_with_ai()
+    test_generate_search_queries()
+    #test_process_with_ai()
     
