@@ -12,14 +12,12 @@ An intelligent search system that combines Google Custom Search API with advance
 ## Features
 
 ### **Web-Based Search Interface**
-- **User-friendly search UI** - No API tools needed, search directly from your browser
+- **User-friendly search UI** - Search directly from your browser
 - **Full configuration options** - Search mode, language, local DB toggle
-- **Document upload** - Attach files to search context on-the-fly
-- **Beautiful results display** - AI summary, key points, and source cards
-- **Real-time processing** - Live search with loading indicators
+- **Results display** - AI summary, key points, and source cards
 
 ### **Web-Based Database Manager**
-- **Modern web interface** for managing local ChromaDB knowledge base
+- **Web interface** for managing local ChromaDB knowledge base
 - **Real-time statistics** - View document count and collection info
 - **Bulk document upload** - Upload multiple text files (.txt, .md, .json)
 - **Document browser** - View, expand, and delete documents
@@ -27,7 +25,7 @@ An intelligent search system that combines Google Custom Search API with advance
 
 ### **Local Vector Database (ChromaDB)**
 - **Multilingual semantic search** using `paraphrase-multilingual-mpnet-base-v2` embedding model
-- **Optimized for Czech language** - High-quality embeddings for 50+ languages
+- **Optimized for various languages** - High-quality embeddings for 50+ languages
 - **Smart query generation** - AI transforms questions into semantic keywords for better retrieval
 - **Relevance filtering** - Configurable distance threshold to filter irrelevant results
 - **Hybrid search mode** - Combines local knowledge base with web search
@@ -91,7 +89,7 @@ Structured Answer with Citations
 - **Google Custom Search API credentials**
   - API Key from Google Cloud Console
   - Search Engine ID from Programmable Search Engine
-- **AI API access** (ChettyAI or compatible endpoint)
+- **AI API access** (OpenAI API or compatible endpoint)
 - **Docker** (optional, recommended for Selenium)
 - **Chrome/Chromium browser** (for local Selenium fallback)
 
@@ -103,28 +101,16 @@ git clone https://github.com/OndrejDuda022/MP_AI_Search.git
 cd MP_AI_Search
 ```
 
-2. **Install dependencies:**
+2. **Run the FIRSTSETUP script:**
 
 **Standard installation (recommended for users)**
-```bash
-pip install -r requirements.txt
+```powershell
+.\FIRSTSETUP.ps1
 ```
-
-This installs all dependencies from [setup.py](setup.py) including:
-- `google-api-python-client` - Google Custom Search API
-- `python-dotenv` - Environment variable management
-- `pydantic` - Data validation
-- `requests` - HTTP requests
-- `beautifulsoup4` - HTML parsing
-- `selenium` - Web automation
-- `webdriver-manager` - ChromeDriver management
-- `pdfplumber` - PDF text extraction
-- `chromadb` - Vector database for semantic search
-- `sentence-transformers` - Multilingual embedding models
 
 3. **Configure environment variables:**
 
-Create a `.env` file in the project root:
+Use `.env.example` to create an `.env` file in the project root:
 ```env
 # Google Custom Search API
 GOOGLE_API_KEY=your_google_api_key
@@ -161,24 +147,6 @@ ALLOW_LOCAL_SELENIUM=True
 PYTHONPATH=./src
 ```
 
-4. **Setup Selenium (optional but recommended):**
-
-**Option A: Automated Docker setup (Windows - recommended)** \
-The script automatically:
-- Checks if Docker is running
-- Pulls `selenium/standalone-chrome:latest` if not present
-- Creates and starts the container with security constraints
-- Configures resource limits (1.5 CPU cores, 1GB RAM)
-
-**Then update your .env file:**
-```env
-SELENIUM_REMOTE_URL=http://localhost:4444/wd/hub
-```
-
-**Option B: Local ChromeDriver (no Docker)**
-
-If you don't use Docker, `webdriver-manager` will automatically download and manage ChromeDriver. No additional setup required, but leave `SELENIUM_REMOTE_URL` empty in `.env`.
-
 ## 📖 Usage
 
 ### Command Line Interface
@@ -208,28 +176,11 @@ Then access:
 - **API Documentation**: http://localhost:8000/docs
 - **Database Manager**: http://localhost:8000/db-manager
 
-## Testing
-
-Run tests:
-```bash
-# Test local database search
-python tests/test_local_search.py
-
-# Load documents into local database
-python tests/document_loader.py
-
-# Test AI processing
-python tests/test_ai_processing.py
-
-# Test Google search and scraping
-python tests/test_google_search.py
-```
-
 ## Local Database Setup
 
 ### Initial Setup
 
-1. **Load documents into the database:**
+1. **Load documents into the database. For example through this:**
 ```bash
 python tests/document_loader.py
 ```
@@ -244,13 +195,6 @@ python tests/test_local_search.py
 ### Understanding the Embedding Model
 
 The system uses **`paraphrase-multilingual-mpnet-base-v2`**:
-- **278M parameters** - High-quality embeddings
-- **50+ languages** - Excellent Czech language support
-- **First run**: Downloads ~470MB model (cached for future use)
-- **Distance metric**: Cosine distance (lower = more similar)
-  - 0.0 - 0.3: Highly relevant
-  - 0.3 - 0.7: Moderately relevant
-  - 0.7+: Less relevant
 
 ### Search Modes
 
