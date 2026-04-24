@@ -146,14 +146,16 @@ def generate_search_queries(user_input, language="auto", max_input_length=500) -
     response = requests.post(url, headers=headers, json=payload)
     try:
         response.raise_for_status()
-    except requests.HTTPError as e:
+        result_content = response.json()["choices"][0]["message"]["content"]
+        parsed_result = SearchQueries(**json.loads(result_content))
+    except Exception as e:
         print(f"[!] AI API request failed: {e}")
-        print(f"Response content: {response.text}")
-        raise
+        try:
+            print(f"Response content: {response.text[:500]}")
+        except Exception:
+            pass
+        return []
 
-    result_content = response.json()["choices"][0]["message"]["content"]
-    parsed_result = SearchQueries(**json.loads(result_content))
-    
     if not parsed_result.is_appropriate:
         print(f"[!] Inappropriate input detected: {parsed_result.reason}")
         return None
@@ -288,14 +290,16 @@ def generate_local_db_queries(user_input, language="auto", max_input_length=500)
     response = requests.post(url, headers=headers, json=payload)
     try:
         response.raise_for_status()
-    except requests.HTTPError as e:
+        result_content = response.json()["choices"][0]["message"]["content"]
+        parsed_result = SearchQueries(**json.loads(result_content))
+    except Exception as e:
         print(f"[!] AI API request failed: {e}")
-        print(f"Response content: {response.text}")
-        raise
+        try:
+            print(f"Response content: {response.text[:500]}")
+        except Exception:
+            pass
+        return []
 
-    result_content = response.json()["choices"][0]["message"]["content"]
-    parsed_result = SearchQueries(**json.loads(result_content))
-    
     if not parsed_result.is_appropriate:
         print(f"[!] Inappropriate input detected: {parsed_result.reason}")
         return None
@@ -415,13 +419,20 @@ def process_with_ai(data, user_query="", language="auto"):
     response = requests.post(url, headers=headers, json=payload)
     try:
         response.raise_for_status()
-    except requests.HTTPError as e:
+        result_content = response.json()["choices"][0]["message"]["content"]
+        parsed_result = AIResponse(**json.loads(result_content))
+    except Exception as e:
         print(f"[!] AI API request failed: {e}")
-        print(f"Response content: {response.text}")
-        raise
-    
-    result_content = response.json()["choices"][0]["message"]["content"]
-    parsed_result = AIResponse(**json.loads(result_content))
+        try:
+            print(f"Response content: {response.text[:500]}")
+        except Exception:
+            pass
+        return AIResponse(
+            summary="Error processing data with AI API.",
+            key_points=[],
+            sources_used=[],
+            confidence="low"
+        )
     
     return parsed_result
 
